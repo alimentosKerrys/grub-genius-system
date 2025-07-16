@@ -1,5 +1,7 @@
+
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { useLocation } from "react-router-dom"
 import { 
   Home, 
   Package, 
@@ -16,17 +18,19 @@ interface SidebarProps {
 }
 
 const navigation = [
-  { name: "Dashboard", href: "/", icon: Home, current: true },
-  { name: "Ingredientes", href: "/ingredientes", icon: Package, current: false },
-  { name: "Platos & Recetas", href: "/platos", icon: ChefHat, current: false },
-  { name: "Planificación", href: "/menu", icon: Calendar, current: false },
-  { name: "Lista de Compras", href: "/compras", icon: ShoppingCart, current: false },
-  { name: "Analytics", href: "/analytics", icon: TrendingUp, current: false },
-  { name: "Alertas", href: "/alertas", icon: AlertTriangle, current: false },
-  { name: "Fidelización", href: "/clientes", icon: Users, current: false },
+  { name: "Dashboard", href: "/", icon: Home },
+  { name: "Ingredientes", href: "/ingredientes", icon: Package },
+  { name: "Platos & Recetas", href: "/platos", icon: ChefHat },
+  { name: "Planificación", href: "/menu", icon: Calendar },
+  { name: "Lista de Compras", href: "/compras", icon: ShoppingCart },
+  { name: "Analytics", href: "/analytics", icon: TrendingUp },
+  { name: "Alertas", href: "/alertas", icon: AlertTriangle },
+  { name: "Fidelización", href: "/clientes", icon: Users },
 ]
 
 export function Sidebar({ className }: SidebarProps) {
+  const location = useLocation()
+  
   return (
     <div className={cn("pb-12 w-64", className)}>
       <div className="space-y-4 py-4">
@@ -47,13 +51,14 @@ export function Sidebar({ className }: SidebarProps) {
           <div className="space-y-1">
             {navigation.map((item) => {
               const Icon = item.icon
+              const isActive = location.pathname === item.href
               return (
                 <Button
                   key={item.name}
-                  variant={item.current ? "chef" : "ghost"}
+                  variant={isActive ? "chef" : "ghost"}
                   className={cn(
                     "w-full justify-start gap-3 h-10",
-                    item.current 
+                    isActive 
                       ? "shadow-warm" 
                       : "hover:bg-accent/50"
                   )}
