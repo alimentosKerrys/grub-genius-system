@@ -10,7 +10,8 @@ import {
   ShoppingCart, 
   TrendingUp,
   AlertTriangle,
-  Users
+  Users,
+  ClipboardList
 } from "lucide-react"
 
 interface SidebarProps {
@@ -21,6 +22,7 @@ const navigation = [
   { name: "Dashboard", href: "/", icon: Home },
   { name: "Ingredientes", href: "/ingredientes", icon: Package },
   { name: "Platos & Recetas", href: "/platos", icon: ChefHat },
+  { name: "Pedidos en Vivo", href: "/pedidos", icon: ClipboardList },
   { name: "Planificación", href: "/menu", icon: Calendar },
   { name: "Lista de Compras", href: "/compras", icon: ShoppingCart },
   { name: "Analytics", href: "/analytics", icon: TrendingUp },

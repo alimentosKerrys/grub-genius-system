@@ -14,7 +14,518 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      adicionales: {
+        Row: {
+          activo: boolean | null
+          created_at: string
+          id: string
+          ingrediente_id: string | null
+          nombre: string
+          precio: number
+        }
+        Insert: {
+          activo?: boolean | null
+          created_at?: string
+          id?: string
+          ingrediente_id?: string | null
+          nombre: string
+          precio: number
+        }
+        Update: {
+          activo?: boolean | null
+          created_at?: string
+          id?: string
+          ingrediente_id?: string | null
+          nombre?: string
+          precio?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "adicionales_ingrediente_id_fkey"
+            columns: ["ingrediente_id"]
+            isOneToOne: false
+            referencedRelation: "ingredientes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ingredientes: {
+        Row: {
+          activo: boolean
+          categoria: string
+          created_at: string
+          id: string
+          merma_porcentaje: number | null
+          nombre: string
+          notas: string | null
+          precio_unitario: number
+          proveedor_principal: string | null
+          stock_actual: number
+          stock_minimo: number
+          unidad_medida: string
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean
+          categoria: string
+          created_at?: string
+          id?: string
+          merma_porcentaje?: number | null
+          nombre: string
+          notas?: string | null
+          precio_unitario?: number
+          proveedor_principal?: string | null
+          stock_actual?: number
+          stock_minimo?: number
+          unidad_medida: string
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean
+          categoria?: string
+          created_at?: string
+          id?: string
+          merma_porcentaje?: number | null
+          nombre?: string
+          notas?: string | null
+          precio_unitario?: number
+          proveedor_principal?: string | null
+          stock_actual?: number
+          stock_minimo?: number
+          unidad_medida?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      lista_compras: {
+        Row: {
+          cantidad_comprada: number | null
+          cantidad_necesaria: number
+          comprado: boolean | null
+          created_at: string
+          fecha_necesaria: string
+          id: string
+          ingrediente_id: string
+          precio_estimado: number | null
+          precio_real: number | null
+          proveedor: string | null
+        }
+        Insert: {
+          cantidad_comprada?: number | null
+          cantidad_necesaria: number
+          comprado?: boolean | null
+          created_at?: string
+          fecha_necesaria: string
+          id?: string
+          ingrediente_id: string
+          precio_estimado?: number | null
+          precio_real?: number | null
+          proveedor?: string | null
+        }
+        Update: {
+          cantidad_comprada?: number | null
+          cantidad_necesaria?: number
+          comprado?: boolean | null
+          created_at?: string
+          fecha_necesaria?: string
+          id?: string
+          ingrediente_id?: string
+          precio_estimado?: number | null
+          precio_real?: number | null
+          proveedor?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lista_compras_ingrediente_id_fkey"
+            columns: ["ingrediente_id"]
+            isOneToOne: false
+            referencedRelation: "ingredientes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      menu_semanal: {
+        Row: {
+          activo: boolean | null
+          cantidad_estimada: number | null
+          cantidad_real: number | null
+          created_at: string
+          dia_semana: string
+          fecha: string
+          id: string
+          plato_id: string
+        }
+        Insert: {
+          activo?: boolean | null
+          cantidad_estimada?: number | null
+          cantidad_real?: number | null
+          created_at?: string
+          dia_semana: string
+          fecha: string
+          id?: string
+          plato_id: string
+        }
+        Update: {
+          activo?: boolean | null
+          cantidad_estimada?: number | null
+          cantidad_real?: number | null
+          created_at?: string
+          dia_semana?: string
+          fecha?: string
+          id?: string
+          plato_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_semanal_plato_id_fkey"
+            columns: ["plato_id"]
+            isOneToOne: false
+            referencedRelation: "platos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mesas: {
+        Row: {
+          activa: boolean | null
+          capacidad: number
+          created_at: string
+          estado: string | null
+          id: string
+          numero: number
+        }
+        Insert: {
+          activa?: boolean | null
+          capacidad?: number
+          created_at?: string
+          estado?: string | null
+          id?: string
+          numero: number
+        }
+        Update: {
+          activa?: boolean | null
+          capacidad?: number
+          created_at?: string
+          estado?: string | null
+          id?: string
+          numero?: number
+        }
+        Relationships: []
+      }
+      pedido_adicionales: {
+        Row: {
+          adicional_id: string
+          cantidad: number
+          created_at: string
+          id: string
+          pedido_item_id: string
+          precio_unitario: number
+        }
+        Insert: {
+          adicional_id: string
+          cantidad?: number
+          created_at?: string
+          id?: string
+          pedido_item_id: string
+          precio_unitario: number
+        }
+        Update: {
+          adicional_id?: string
+          cantidad?: number
+          created_at?: string
+          id?: string
+          pedido_item_id?: string
+          precio_unitario?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pedido_adicionales_adicional_id_fkey"
+            columns: ["adicional_id"]
+            isOneToOne: false
+            referencedRelation: "adicionales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedido_adicionales_pedido_item_id_fkey"
+            columns: ["pedido_item_id"]
+            isOneToOne: false
+            referencedRelation: "pedido_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pedido_items: {
+        Row: {
+          cantidad: number
+          created_at: string
+          es_combinacion: boolean | null
+          id: string
+          observaciones: string | null
+          pedido_id: string
+          plato_combinado_id: string | null
+          plato_id: string
+          porcentaje_combinacion: number | null
+          precio_unitario: number
+        }
+        Insert: {
+          cantidad?: number
+          created_at?: string
+          es_combinacion?: boolean | null
+          id?: string
+          observaciones?: string | null
+          pedido_id: string
+          plato_combinado_id?: string | null
+          plato_id: string
+          porcentaje_combinacion?: number | null
+          precio_unitario: number
+        }
+        Update: {
+          cantidad?: number
+          created_at?: string
+          es_combinacion?: boolean | null
+          id?: string
+          observaciones?: string | null
+          pedido_id?: string
+          plato_combinado_id?: string | null
+          plato_id?: string
+          porcentaje_combinacion?: number | null
+          precio_unitario?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pedido_items_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "pedidos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedido_items_plato_combinado_id_fkey"
+            columns: ["plato_combinado_id"]
+            isOneToOne: false
+            referencedRelation: "platos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pedido_items_plato_id_fkey"
+            columns: ["plato_id"]
+            isOneToOne: false
+            referencedRelation: "platos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pedidos: {
+        Row: {
+          cliente_nombre: string | null
+          cliente_telefono: string | null
+          created_at: string
+          direccion_delivery: string | null
+          estado: string
+          hora_entrega: string | null
+          hora_pedido: string
+          id: string
+          mesa_id: string | null
+          mozo_responsable: string | null
+          numero_pedido: string
+          observaciones: string | null
+          subtotal: number
+          tiempo_preparacion: number | null
+          tipo_pedido: string
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          cliente_nombre?: string | null
+          cliente_telefono?: string | null
+          created_at?: string
+          direccion_delivery?: string | null
+          estado?: string
+          hora_entrega?: string | null
+          hora_pedido?: string
+          id?: string
+          mesa_id?: string | null
+          mozo_responsable?: string | null
+          numero_pedido: string
+          observaciones?: string | null
+          subtotal?: number
+          tiempo_preparacion?: number | null
+          tipo_pedido: string
+          total?: number
+          updated_at?: string
+        }
+        Update: {
+          cliente_nombre?: string | null
+          cliente_telefono?: string | null
+          created_at?: string
+          direccion_delivery?: string | null
+          estado?: string
+          hora_entrega?: string | null
+          hora_pedido?: string
+          id?: string
+          mesa_id?: string | null
+          mozo_responsable?: string | null
+          numero_pedido?: string
+          observaciones?: string | null
+          subtotal?: number
+          tiempo_preparacion?: number | null
+          tipo_pedido?: string
+          total?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pedidos_mesa_id_fkey"
+            columns: ["mesa_id"]
+            isOneToOne: false
+            referencedRelation: "mesas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platos: {
+        Row: {
+          activo: boolean
+          categoria: string
+          costo_total: number | null
+          created_at: string
+          descripcion: string | null
+          dias_populares: string | null
+          es_combinable: boolean | null
+          id: string
+          incluye_arroz: boolean | null
+          margen_porcentaje: number | null
+          nombre: string
+          porciones_por_receta: number
+          precio_base: number
+          tiempo_preparacion: number | null
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean
+          categoria: string
+          costo_total?: number | null
+          created_at?: string
+          descripcion?: string | null
+          dias_populares?: string | null
+          es_combinable?: boolean | null
+          id?: string
+          incluye_arroz?: boolean | null
+          margen_porcentaje?: number | null
+          nombre: string
+          porciones_por_receta?: number
+          precio_base: number
+          tiempo_preparacion?: number | null
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean
+          categoria?: string
+          costo_total?: number | null
+          created_at?: string
+          descripcion?: string | null
+          dias_populares?: string | null
+          es_combinable?: boolean | null
+          id?: string
+          incluye_arroz?: boolean | null
+          margen_porcentaje?: number | null
+          nombre?: string
+          porciones_por_receta?: number
+          precio_base?: number
+          tiempo_preparacion?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      recetas: {
+        Row: {
+          cantidad: number
+          created_at: string
+          es_principal: boolean | null
+          id: string
+          ingrediente_id: string
+          notas: string | null
+          plato_id: string
+          unidad: string
+        }
+        Insert: {
+          cantidad: number
+          created_at?: string
+          es_principal?: boolean | null
+          id?: string
+          ingrediente_id: string
+          notas?: string | null
+          plato_id: string
+          unidad: string
+        }
+        Update: {
+          cantidad?: number
+          created_at?: string
+          es_principal?: boolean | null
+          id?: string
+          ingrediente_id?: string
+          notas?: string | null
+          plato_id?: string
+          unidad?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recetas_ingrediente_id_fkey"
+            columns: ["ingrediente_id"]
+            isOneToOne: false
+            referencedRelation: "ingredientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recetas_plato_id_fkey"
+            columns: ["plato_id"]
+            isOneToOne: false
+            referencedRelation: "platos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      transacciones: {
+        Row: {
+          created_at: string
+          descripcion: string | null
+          fecha_transaccion: string
+          id: string
+          metodo_pago: string | null
+          monto: number
+          pedido_id: string | null
+          tipo: string
+        }
+        Insert: {
+          created_at?: string
+          descripcion?: string | null
+          fecha_transaccion?: string
+          id?: string
+          metodo_pago?: string | null
+          monto: number
+          pedido_id?: string | null
+          tipo: string
+        }
+        Update: {
+          created_at?: string
+          descripcion?: string | null
+          fecha_transaccion?: string
+          id?: string
+          metodo_pago?: string | null
+          monto?: number
+          pedido_id?: string | null
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transacciones_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "pedidos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
