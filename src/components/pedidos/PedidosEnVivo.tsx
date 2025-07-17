@@ -1,5 +1,5 @@
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -15,17 +15,24 @@ import {
 import { NuevoPedidoDialog } from "./NuevoPedidoDialog"
 import { ListaPedidos } from "./ListaPedidos"
 import { EstadoMesas } from "./EstadoMesas"
+import { usePedidos } from "@/hooks/usePedidos"
 
 export function PedidosEnVivo() {
   const [nuevoPedidoOpen, setNuevoPedidoOpen] = useState(false)
   const [tipoNuevoPedido, setTipoNuevoPedido] = useState<"local" | "delivery" | "para_llevar">("local")
+  const { pedidos } = usePedidos()
 
-  // Datos simulados - en producción vendrán de la base de datos
+  // Calcular estadísticas en tiempo real
   const estadisticas = {
-    pedidosPendientes: 3,
-    pedidosPreparando: 2,
-    pedidosListos: 1,
-    tiempoPromedioPreparacion: 18
+    pedidosPendientes: pedidos.filter(p => p.estado === 'pendiente').length,
+    pedidosPreparando: pedidos.filter(p => p.estado === 'preparando').length,
+    pedidosListos: pedidos.filter(p => p.estado === 'listo').length,
+    tiempoPromedioPreparacion: Math.round(
+      pedidos
+        .filter(p => p.tiempo_preparacion)
+        .reduce((acc, p) => acc + (p.tiempo_preparacion || 0), 0) / 
+      Math.max(1, pedidos.filter(p => p.tiempo_preparacion).length)
+    ) || 18
   }
 
   const handleNuevoPedido = (tipo: "local" | "delivery" | "para_llevar") => {

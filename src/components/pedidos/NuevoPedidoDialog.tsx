@@ -9,8 +9,12 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { Plus, Minus, Users, Truck, ShoppingBag } from "lucide-react"
+import { Switch } from "@/components/ui/switch"
+import { Plus, Minus, Users, Truck, ShoppingBag, UtensilsCrossed } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { useMenuData } from "@/hooks/useMenuData"
+import { useMesas } from "@/hooks/useMesas"
+import { supabase } from "@/integrations/supabase/client"
 
 interface NuevoPedidoDialogProps {
   open: boolean
@@ -18,79 +22,29 @@ interface NuevoPedidoDialogProps {
   tipo: "local" | "delivery" | "para_llevar"
 }
 
-interface PlatoMenu {
-  id: string
-  nombre: string
-  categoria: string
-  precio: number
-  descripcion?: string
-  tiempoPreparacion: number
-  combinable: boolean
-}
-
 interface ItemPedido {
-  plato: PlatoMenu
+  plato_id: string
+  plato_nombre: string
+  plato_precio: number
   cantidad: number
+  es_menu: boolean
+  entrada_id?: string
+  entrada_nombre?: string
   observaciones?: string
 }
 
-// Datos simulados del menú del día - en producción vendrán de Supabase
-const menuDelDia: PlatoMenu[] = [
-  {
-    id: "1",
-    nombre: "Olluquito con Carne",
-    categoria: "guisos",
-    precio: 18.00,
-    descripcion: "Con carne de res y olluco fresco",
-    tiempoPreparacion: 25,
-    combinable: true
-  },
-  {
-    id: "2", 
-    nombre: "Ají de Pollo",
-    categoria: "guisos",
-    precio: 16.00,
-    descripcion: "Pollo en salsa de ají amarillo",
-    tiempoPreparacion: 20,
-    combinable: true
-  },
-  {
-    id: "3",
-    nombre: "Chicharrón de Pollo",
-    categoria: "frituras",
-    precio: 19.00,
-    descripcion: "Pollo crocante y jugoso",
-    tiempoPreparacion: 15,
-    combinable: false
-  },
-  {
-    id: "4",
-    nombre: "Tallarín Saltado",
-    categoria: "tallarines",
-    precio: 15.00,
-    descripcion: "Con pollo y verduras",
-    tiempoPreparacion: 18,
-    combinable: true
-  },
-  {
-    id: "5",
-    nombre: "Seco de Pollo",
-    categoria: "guisos", 
-    precio: 17.00,
-    descripcion: "Con culantro y frejoles",
-    tiempoPreparacion: 30,
-    combinable: true
-  }
-]
-
 export function NuevoPedidoDialog({ open, onOpenChange, tipo }: NuevoPedidoDialogProps) {
   const { toast } = useToast()
+  const { entradas, platos, menus } = useMenuData()
+  const { mesas } = useMesas()
+  
   const [items, setItems] = useState<ItemPedido[]>([])
   const [mesaSeleccionada, setMesaSeleccionada] = useState("")
   const [cliente, setCliente] = useState("")
   const [telefono, setTelefono] = useState("")
   const [direccion, setDireccion] = useState("")
   const [observaciones, setObservaciones] = useState("")
+  const [guardando, setGuardando] = useState(false)
 
   const getTipoIcon = () => {
     switch (tipo) {
@@ -114,34 +68,54 @@ export function NuevoPedidoDialog({ open, onOpenChange, tipo }: NuevoPedidoDialo
     }
   }
 
-  const agregarItem = (plato: PlatoMenu) => {
-    const itemExistente = items.find(item => item.plato.id === plato.id)
+  const agregarPlato = (plato: any, esMenu: boolean = false, entradaId?: string) => {
+    const nuevoItem: ItemPedido = {
+      plato_id: plato.id,
+      plato_nombre: plato.nombre,
+      plato_precio: plato.precio_base,
+      cantidad: 1,
+      es_menu: esMenu,
+      entrada_id: entradaId,
+      entrada_nombre: entradaId ? entradas.find(e => e.id === entradaId)?.nombre : undefined
+    }
+
+    const itemExistente = items.find(item => 
+      item.plato_id === plato.id && 
+      item.es_menu === esMenu && 
+      item.entrada_id === entradaId
+    )
     
     if (itemExistente) {
       setItems(items.map(item => 
-        item.plato.id === plato.id 
+        item === itemExistente
           ? { ...item, cantidad: item.cantidad + 1 }
           : item
       ))
     } else {
-      setItems([...items, { plato, cantidad: 1 }])
+      setItems([...items, nuevoItem])
     }
   }
 
-  const actualizarCantidad = (platoId: string, nuevaCantidad: number) => {
+  const actualizarCantidad = (index: number, nuevaCantidad: number) => {
     if (nuevaCantidad <= 0) {
-      setItems(items.filter(item => item.plato.id !== platoId))
+      setItems(items.filter((_, i) => i !== index))
     } else {
-      setItems(items.map(item => 
-        item.plato.id === platoId 
-          ? { ...item, cantidad: nuevaCantidad }
-          : item
+      setItems(items.map((item, i) => 
+        i === index ? { ...item, cantidad: nuevaCantidad } : item
       ))
     }
   }
 
   const calcularTotal = () => {
-    return items.reduce((total, item) => total + (item.plato.precio * item.cantidad), 0)
+    return items.reduce((total, item) => {
+      const precio = item.es_menu ? 9.00 : item.plato_precio
+      return total + (precio * item.cantidad)
+    }, 0)
+  }
+
+  const generarNumeroPedido = () => {
+    const timestamp = Date.now().toString().slice(-6)
+    return `P-${timestamp}`
   }
 
   const guardarPedido = async () => {
@@ -172,36 +146,88 @@ export function NuevoPedidoDialog({ open, onOpenChange, tipo }: NuevoPedidoDialo
       return
     }
 
-    // Aquí se implementará la lógica para guardar en Supabase
-    console.log("Guardar pedido:", {
-      tipo,
-      mesa: mesaSeleccionada,
-      cliente,
-      telefono,
-      direccion,
-      items,
-      total: calcularTotal(),
-      observaciones
-    })
+    setGuardando(true)
 
-    toast({
-      title: "Pedido creado",
-      description: `Pedido ${tipo} registrado exitosamente`,
-    })
+    try {
+      const total = calcularTotal()
+      const numeroPedido = generarNumeroPedido()
 
-    // Limpiar formulario y cerrar
-    setItems([])
-    setMesaSeleccionada("")
-    setCliente("")
-    setTelefono("")
-    setDireccion("")
-    setObservaciones("")
-    onOpenChange(false)
+      // Crear pedido
+      const { data: pedido, error: pedidoError } = await supabase
+        .from('pedidos')
+        .insert({
+          numero_pedido: numeroPedido,
+          tipo_pedido: tipo,
+          mesa_id: tipo === "local" ? mesaSeleccionada : null,
+          cliente_nombre: tipo !== "local" ? cliente : null,
+          cliente_telefono: tipo !== "local" ? telefono : null,
+          direccion_delivery: tipo === "delivery" ? direccion : null,
+          subtotal: total,
+          total: total,
+          observaciones: observaciones || null
+        })
+        .select()
+        .single()
+
+      if (pedidoError) throw pedidoError
+
+      // Crear items del pedido
+      const itemsData = items.map(item => ({
+        pedido_id: pedido.id,
+        plato_id: item.plato_id,
+        cantidad: item.cantidad,
+        precio_unitario: item.plato_precio,
+        es_menu: item.es_menu,
+        entrada_id: item.entrada_id || null,
+        precio_menu: item.es_menu ? 9.00 : null,
+        observaciones: item.observaciones || null
+      }))
+
+      const { error: itemsError } = await supabase
+        .from('pedido_items')
+        .insert(itemsData)
+
+      if (itemsError) throw itemsError
+
+      // Actualizar estado de mesa si es local
+      if (tipo === "local" && mesaSeleccionada) {
+        await supabase
+          .from('mesas')
+          .update({ estado: 'ocupada' })
+          .eq('id', mesaSeleccionada)
+      }
+
+      toast({
+        title: "Pedido creado",
+        description: `Pedido ${numeroPedido} registrado exitosamente`,
+      })
+
+      // Limpiar formulario
+      setItems([])
+      setMesaSeleccionada("")
+      setCliente("")
+      setTelefono("")
+      setDireccion("")
+      setObservaciones("")
+      onOpenChange(false)
+
+    } catch (error) {
+      console.error('Error creando pedido:', error)
+      toast({
+        title: "Error",
+        description: "No se pudo crear el pedido",
+        variant: "destructive"
+      })
+    } finally {
+      setGuardando(false)
+    }
   }
+
+  const mesasLibres = mesas.filter(m => m.estado === 'libre')
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             {getTipoIcon()}
@@ -220,10 +246,11 @@ export function NuevoPedidoDialog({ open, onOpenChange, tipo }: NuevoPedidoDialo
                     <SelectValue placeholder="Seleccionar mesa" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="1">Mesa 1 (4 personas)</SelectItem>
-                    <SelectItem value="2">Mesa 2 (4 personas)</SelectItem>
-                    <SelectItem value="4">Mesa 4 (2 personas)</SelectItem>
-                    <SelectItem value="6">Mesa 6 (8 personas)</SelectItem>
+                    {mesasLibres.map(mesa => (
+                      <SelectItem key={mesa.id} value={mesa.id}>
+                        Mesa {mesa.numero} ({mesa.capacidad} personas)
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -284,19 +311,34 @@ export function NuevoPedidoDialog({ open, onOpenChange, tipo }: NuevoPedidoDialo
                   <CardTitle className="text-lg">Resumen del Pedido</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  {items.map((item) => (
-                    <div key={item.plato.id} className="flex justify-between items-center">
+                  {items.map((item, index) => (
+                    <div key={index} className="flex justify-between items-center">
                       <div className="flex-1">
-                        <div className="font-medium">{item.plato.nombre}</div>
+                        {item.es_menu ? (
+                          <div className="space-y-1">
+                            <div className="font-medium flex items-center gap-1">
+                              <UtensilsCrossed className="w-4 h-4 text-orange-600" />
+                              Menú Ejecutivo
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              • {item.entrada_nombre || 'Sin entrada'}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              • {item.plato_nombre}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="font-medium">{item.plato_nombre}</div>
+                        )}
                         <div className="text-sm text-muted-foreground">
-                          S/ {item.plato.precio.toFixed(2)} c/u
+                          S/ {item.es_menu ? '9.00' : item.plato_precio.toFixed(2)} c/u
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => actualizarCantidad(item.plato.id, item.cantidad - 1)}
+                          onClick={() => actualizarCantidad(index, item.cantidad - 1)}
                         >
                           <Minus className="w-3 h-3" />
                         </Button>
@@ -304,12 +346,12 @@ export function NuevoPedidoDialog({ open, onOpenChange, tipo }: NuevoPedidoDialo
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => actualizarCantidad(item.plato.id, item.cantidad + 1)}
+                          onClick={() => actualizarCantidad(index, item.cantidad + 1)}
                         >
                           <Plus className="w-3 h-3" />
                         </Button>
                         <div className="w-20 text-right font-semibold">
-                          S/ {(item.plato.precio * item.cantidad).toFixed(2)}
+                          S/ {((item.es_menu ? 9.00 : item.plato_precio) * item.cantidad).toFixed(2)}
                         </div>
                       </div>
                     </div>
@@ -326,47 +368,106 @@ export function NuevoPedidoDialog({ open, onOpenChange, tipo }: NuevoPedidoDialo
             )}
           </div>
 
-          {/* Panel Derecho - Menú del Día */}
+          {/* Panel Derecho - Menú */}
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Menú del Día</h3>
             
-            <div className="space-y-3 max-h-96 overflow-y-auto">
-              {menuDelDia.map((plato) => (
-                <Card key={plato.id} className="cursor-pointer hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h4 className="font-medium">{plato.nombre}</h4>
-                          {plato.combinable && (
-                            <Badge variant="secondary" className="text-xs">
-                              Combinable
-                            </Badge>
-                          )}
+            {/* Sección MENÚS */}
+            {menus.length > 0 && (
+              <div className="space-y-3">
+                <h4 className="font-medium text-orange-600 flex items-center gap-2">
+                  <UtensilsCrossed className="w-4 h-4" />
+                  MENÚS (S/ 9.00)
+                </h4>
+                {menus.map((menu) => (
+                  <Card key={menu.id} className="cursor-pointer hover:shadow-md transition-shadow border-orange-200">
+                    <CardContent className="p-4">
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <h4 className="font-medium flex items-center gap-2">
+                              <UtensilsCrossed className="w-4 h-4 text-orange-600" />
+                              {menu.nombre}
+                            </h4>
+                            <p className="text-sm text-muted-foreground">{menu.descripcion}</p>
+                          </div>
+                          <div className="font-semibold text-lg text-orange-600">
+                            S/ {menu.precio_menu.toFixed(2)}
+                          </div>
                         </div>
-                        <p className="text-sm text-muted-foreground mb-1">
-                          {plato.descripcion}
-                        </p>
-                        <div className="text-xs text-muted-foreground">
-                          {plato.tiempoPreparacion} min • {plato.categoria}
+                        
+                        {/* Selector de Entrada */}
+                        <div className="space-y-2">
+                          <Label className="text-sm">Seleccionar Entrada:</Label>
+                          <div className="grid grid-cols-1 gap-2">
+                            {entradas.map(entrada => (
+                              <div key={entrada.id} className="flex items-center justify-between p-2 border rounded">
+                                <span className="text-sm">{entrada.nombre}</span>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    // Seleccionar plato para el menú
+                                    const platoSeleccionado = platos[0] // Por simplicidad, tomar el primer plato
+                                    if (platoSeleccionado) {
+                                      agregarPlato(platoSeleccionado, true, entrada.id)
+                                    }
+                                  }}
+                                >
+                                  <Plus className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="font-semibold text-lg mb-2">
-                          S/ {plato.precio.toFixed(2)}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+            
+            {/* Sección PLATOS INDIVIDUALES */}
+            <div className="space-y-3">
+              <h4 className="font-medium">PLATOS INDIVIDUALES</h4>
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {platos.map((plato) => (
+                  <Card key={plato.id} className="cursor-pointer hover:shadow-md transition-shadow">
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className="font-medium">{plato.nombre}</h4>
+                            {plato.es_combinable && (
+                              <Badge variant="secondary" className="text-xs">
+                                Combinable
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground mb-1">
+                            {plato.descripcion}
+                          </p>
+                          <div className="text-xs text-muted-foreground">
+                            {plato.tiempo_preparacion} min • {plato.categoria}
+                          </div>
                         </div>
-                        <Button 
-                          size="sm"
-                          onClick={() => agregarItem(plato)}
-                          className="bg-orange-600 hover:bg-orange-700"
-                        >
-                          <Plus className="w-4 h-4" />
-                        </Button>
+                        <div className="text-right">
+                          <div className="font-semibold text-lg mb-2">
+                            S/ {plato.precio_base.toFixed(2)}
+                          </div>
+                          <Button 
+                            size="sm"
+                            onClick={() => agregarPlato(plato, false)}
+                            className="bg-orange-600 hover:bg-orange-700"
+                          >
+                            <Plus className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -376,15 +477,16 @@ export function NuevoPedidoDialog({ open, onOpenChange, tipo }: NuevoPedidoDialo
           <Button 
             variant="outline" 
             onClick={() => onOpenChange(false)}
+            disabled={guardando}
           >
             Cancelar
           </Button>
           <Button 
             onClick={guardarPedido}
             className="bg-green-600 hover:bg-green-700"
-            disabled={items.length === 0}
+            disabled={items.length === 0 || guardando}
           >
-            Crear Pedido
+            {guardando ? "Creando..." : "Crear Pedido"}
           </Button>
         </div>
       </DialogContent>

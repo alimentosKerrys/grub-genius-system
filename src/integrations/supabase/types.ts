@@ -49,6 +49,33 @@ export type Database = {
           },
         ]
       }
+      entradas: {
+        Row: {
+          activo: boolean
+          costo_preparacion: number | null
+          created_at: string
+          descripcion: string | null
+          id: string
+          nombre: string
+        }
+        Insert: {
+          activo?: boolean
+          costo_preparacion?: number | null
+          created_at?: string
+          descripcion?: string | null
+          id?: string
+          nombre: string
+        }
+        Update: {
+          activo?: boolean
+          costo_preparacion?: number | null
+          created_at?: string
+          descripcion?: string | null
+          id?: string
+          nombre?: string
+        }
+        Relationships: []
+      }
       ingredientes: {
         Row: {
           activo: boolean
@@ -185,6 +212,33 @@ export type Database = {
           },
         ]
       }
+      menus: {
+        Row: {
+          activo: boolean
+          created_at: string
+          descripcion: string | null
+          id: string
+          nombre: string
+          precio_menu: number
+        }
+        Insert: {
+          activo?: boolean
+          created_at?: string
+          descripcion?: string | null
+          id?: string
+          nombre?: string
+          precio_menu?: number
+        }
+        Update: {
+          activo?: boolean
+          created_at?: string
+          descripcion?: string | null
+          id?: string
+          nombre?: string
+          precio_menu?: number
+        }
+        Relationships: []
+      }
       mesas: {
         Row: {
           activa: boolean | null
@@ -258,40 +312,56 @@ export type Database = {
         Row: {
           cantidad: number
           created_at: string
+          entrada_id: string | null
           es_combinacion: boolean | null
+          es_menu: boolean | null
           id: string
           observaciones: string | null
           pedido_id: string
           plato_combinado_id: string | null
           plato_id: string
           porcentaje_combinacion: number | null
+          precio_menu: number | null
           precio_unitario: number
         }
         Insert: {
           cantidad?: number
           created_at?: string
+          entrada_id?: string | null
           es_combinacion?: boolean | null
+          es_menu?: boolean | null
           id?: string
           observaciones?: string | null
           pedido_id: string
           plato_combinado_id?: string | null
           plato_id: string
           porcentaje_combinacion?: number | null
+          precio_menu?: number | null
           precio_unitario: number
         }
         Update: {
           cantidad?: number
           created_at?: string
+          entrada_id?: string | null
           es_combinacion?: boolean | null
+          es_menu?: boolean | null
           id?: string
           observaciones?: string | null
           pedido_id?: string
           plato_combinado_id?: string | null
           plato_id?: string
           porcentaje_combinacion?: number | null
+          precio_menu?: number | null
           precio_unitario?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "pedido_items_entrada_id_fkey"
+            columns: ["entrada_id"]
+            isOneToOne: false
+            referencedRelation: "entradas"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "pedido_items_pedido_id_fkey"
             columns: ["pedido_id"]

@@ -1,5 +1,4 @@
 
-import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -11,77 +10,13 @@ import {
   ShoppingBag, 
   ChefHat,
   CheckCircle,
-  Eye
+  Eye,
+  UtensilsCrossed
 } from "lucide-react"
-
-interface Pedido {
-  id: string
-  numero: string
-  tipo: "local" | "delivery" | "para_llevar"
-  estado: "pendiente" | "preparando" | "listo" | "entregado"
-  mesa?: number
-  cliente?: string
-  telefono?: string
-  hora: string
-  items: Array<{
-    plato: string
-    cantidad: number
-    precio: number
-    observaciones?: string
-  }>
-  total: number
-  tiempoEstimado: number
-}
-
-// Datos simulados - en producción vendrán de Supabase
-const pedidosSimulados: Pedido[] = [
-  {
-    id: "1",
-    numero: "P-001",
-    tipo: "local",
-    estado: "pendiente",
-    mesa: 3,
-    hora: "12:15",
-    items: [
-      { plato: "Olluquito con Carne", cantidad: 2, precio: 18.00 },
-      { plato: "Ají de Pollo", cantidad: 1, precio: 16.00, observaciones: "+huevo" }
-    ],
-    total: 52.00,
-    tiempoEstimado: 25
-  },
-  {
-    id: "2", 
-    numero: "P-002",
-    tipo: "delivery",
-    estado: "preparando",
-    cliente: "María González",
-    telefono: "987654321",
-    hora: "12:08",
-    items: [
-      { plato: "Seco de Pollo", cantidad: 3, precio: 17.00 },
-      { plato: "Chicharrón de Pollo", cantidad: 1, precio: 19.00 }
-    ],
-    total: 70.00,
-    tiempoEstimado: 15
-  },
-  {
-    id: "3",
-    numero: "P-003", 
-    tipo: "para_llevar",
-    estado: "listo",
-    cliente: "Carlos Mendoza",
-    telefono: "123456789",
-    hora: "11:55",
-    items: [
-      { plato: "Tallarín Saltado", cantidad: 2, precio: 15.00 }
-    ],
-    total: 30.00,
-    tiempoEstimado: 0
-  }
-]
+import { usePedidos } from "@/hooks/usePedidos"
 
 export function ListaPedidos() {
-  const [pedidos] = useState<Pedido[]>(pedidosSimulados)
+  const { pedidos, loading, cambiarEstadoPedido } = usePedidos()
 
   const getEstadoBadge = (estado: string) => {
     switch (estado) {
@@ -111,9 +46,15 @@ export function ListaPedidos() {
     }
   }
 
-  const cambiarEstado = (pedidoId: string, nuevoEstado: string) => {
-    console.log(`Cambiar pedido ${pedidoId} a ${nuevoEstado}`)
-    // Aquí se implementará la lógica para actualizar en Supabase
+  const formatHora = (hora: string) => {
+    return new Date(hora).toLocaleTimeString('es-PE', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    })
+  }
+
+  if (loading) {
+    return <div className="text-center py-8">Cargando pedidos...</div>
   }
 
   return (
@@ -123,13 +64,13 @@ export function ListaPedidos() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                {getTipoIcon(pedido.tipo)}
+                {getTipoIcon(pedido.tipo_pedido)}
                 <div>
-                  <CardTitle className="text-lg">{pedido.numero}</CardTitle>
+                  <CardTitle className="text-lg">{pedido.numero_pedido}</CardTitle>
                   <p className="text-sm text-muted-foreground">
-                    {pedido.tipo === "local" && `Mesa ${pedido.mesa}`}
-                    {pedido.tipo !== "local" && pedido.cliente}
-                    {pedido.telefono && ` • ${pedido.telefono}`}
+                    {pedido.tipo_pedido === "local" && pedido.mesa && `Mesa ${pedido.mesa.numero}`}
+                    {pedido.tipo_pedido !== "local" && pedido.cliente_nombre}
+                    {pedido.cliente_telefono && ` • ${pedido.cliente_telefono}`}
                   </p>
                 </div>
               </div>
@@ -137,7 +78,7 @@ export function ListaPedidos() {
                 {getEstadoBadge(pedido.estado)}
                 <div className="text-sm text-muted-foreground flex items-center gap-1">
                   <Clock className="w-3 h-3" />
-                  {pedido.hora}
+                  {formatHora(pedido.hora_pedido)}
                 </div>
               </div>
             </div>
@@ -147,14 +88,36 @@ export function ListaPedidos() {
             {/* Items del Pedido */}
             <div className="space-y-2">
               {pedido.items.map((item, index) => (
-                <div key={index} className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <div className="font-medium">{item.cantidad}x {item.plato}</div>
-                    {item.observaciones && (
-                      <div className="text-sm text-orange-600 italic">{item.observaciones}</div>
-                    )}
+                <div key={index} className="space-y-1">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      {item.es_menu ? (
+                        <div className="space-y-1">
+                          <div className="font-medium flex items-center gap-2">
+                            <UtensilsCrossed className="w-4 h-4 text-orange-600" />
+                            {item.cantidad}x Menú Ejecutivo
+                          </div>
+                          <div className="text-sm text-muted-foreground ml-6">
+                            • Entrada: {item.entrada?.nombre || 'Por seleccionar'}
+                          </div>
+                          <div className="text-sm text-muted-foreground ml-6">
+                            • Plato: {item.plato.nombre}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="font-medium">{item.cantidad}x {item.plato.nombre}</div>
+                      )}
+                      {item.observaciones && (
+                        <div className="text-sm text-orange-600 italic">{item.observaciones}</div>
+                      )}
+                    </div>
+                    <div className="font-semibold">
+                      S/ {item.es_menu ? 
+                        (item.precio_menu! * item.cantidad).toFixed(2) : 
+                        (item.precio_unitario * item.cantidad).toFixed(2)
+                      }
+                    </div>
                   </div>
-                  <div className="font-semibold">S/ {item.precio.toFixed(2)}</div>
                 </div>
               ))}
             </div>
@@ -171,7 +134,7 @@ export function ListaPedidos() {
                 {pedido.estado === "pendiente" && (
                   <Button 
                     size="sm" 
-                    onClick={() => cambiarEstado(pedido.id, "preparando")}
+                    onClick={() => cambiarEstadoPedido(pedido.id, "preparando")}
                     className="bg-blue-600 hover:bg-blue-700"
                   >
                     <ChefHat className="w-4 h-4 mr-1" />
@@ -182,7 +145,7 @@ export function ListaPedidos() {
                 {pedido.estado === "preparando" && (
                   <Button 
                     size="sm" 
-                    onClick={() => cambiarEstado(pedido.id, "listo")}
+                    onClick={() => cambiarEstadoPedido(pedido.id, "listo")}
                     className="bg-green-600 hover:bg-green-700"
                   >
                     <CheckCircle className="w-4 h-4 mr-1" />
@@ -193,7 +156,7 @@ export function ListaPedidos() {
                 {pedido.estado === "listo" && (
                   <Button 
                     size="sm" 
-                    onClick={() => cambiarEstado(pedido.id, "entregado")}
+                    onClick={() => cambiarEstadoPedido(pedido.id, "entregado")}
                     className="bg-gray-600 hover:bg-gray-700"
                   >
                     <CheckCircle className="w-4 h-4 mr-1" />
@@ -212,10 +175,17 @@ export function ListaPedidos() {
             </div>
 
             {/* Tiempo Estimado */}
-            {pedido.tiempoEstimado > 0 && (
+            {pedido.tiempo_preparacion && pedido.tiempo_preparacion > 0 && (
               <div className="text-sm text-muted-foreground flex items-center gap-1">
                 <Clock className="w-3 h-3" />
-                Tiempo estimado: {pedido.tiempoEstimado} minutos
+                Tiempo estimado: {pedido.tiempo_preparacion} minutos
+              </div>
+            )}
+
+            {/* Observaciones del pedido */}
+            {pedido.observaciones && (
+              <div className="text-sm bg-yellow-50 p-2 rounded border-l-4 border-yellow-400">
+                <strong>Observaciones:</strong> {pedido.observaciones}
               </div>
             )}
           </CardContent>

@@ -4,77 +4,14 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { 
   Users, 
-  Clock, 
-  DollarSign,
+  Clock,
   Plus
 } from "lucide-react"
-
-interface Mesa {
-  id: string
-  numero: number
-  capacidad: number
-  estado: "libre" | "ocupada" | "reservada"
-  tiempoOcupacion?: number
-  pedidoActual?: {
-    numero: string
-    total: number
-    estado: string
-  }
-}
-
-// Datos simulados - en producción vendrán de Supabase
-const mesasSimuladas: Mesa[] = [
-  {
-    id: "1",
-    numero: 1,
-    capacidad: 4,
-    estado: "libre"
-  },
-  {
-    id: "2", 
-    numero: 2,
-    capacidad: 4,
-    estado: "libre"
-  },
-  {
-    id: "3",
-    numero: 3,
-    capacidad: 6,
-    estado: "ocupada",
-    tiempoOcupacion: 25,
-    pedidoActual: {
-      numero: "P-001",
-      total: 52.00,
-      estado: "pendiente"
-    }
-  },
-  {
-    id: "4",
-    numero: 4,
-    capacidad: 2,
-    estado: "libre"
-  },
-  {
-    id: "5",
-    numero: 5,
-    capacidad: 4,
-    estado: "ocupada",
-    tiempoOcupacion: 45,
-    pedidoActual: {
-      numero: "P-004",
-      total: 38.00,
-      estado: "preparando"
-    }
-  },
-  {
-    id: "6",
-    numero: 6,
-    capacidad: 8,
-    estado: "reservada"
-  }
-]
+import { useMesas } from "@/hooks/useMesas"
 
 export function EstadoMesas() {
+  const { mesas, loading, cambiarEstadoMesa, getTiempoOcupacion } = useMesas()
+
   const getEstadoColor = (estado: string) => {
     switch (estado) {
       case "libre":
@@ -101,19 +38,29 @@ export function EstadoMesas() {
     }
   }
 
-  const asignarMesa = (mesaId: string) => {
-    console.log(`Asignar mesa ${mesaId}`)
-    // Aquí se implementará la lógica para asignar mesa
+  const handleAsignarMesa = (mesaId: string) => {
+    // Por ahora solo cambia el estado, más adelante se integrará con crear pedido
+    cambiarEstadoMesa(mesaId, "ocupada")
   }
 
-  const liberarMesa = (mesaId: string) => {
-    console.log(`Liberar mesa ${mesaId}`)
-    // Aquí se implementará la lógica para liberar mesa
+  const handleLiberarMesa = (mesaId: string) => {
+    cambiarEstadoMesa(mesaId, "libre")
+  }
+
+  const formatHora = (hora: string) => {
+    return new Date(hora).toLocaleTimeString('es-PE', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    })
+  }
+
+  if (loading) {
+    return <div className="text-center py-8">Cargando mesas...</div>
   }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {mesasSimuladas.map((mesa) => (
+      {mesas.map((mesa) => (
         <Card 
           key={mesa.id} 
           className={`transition-colors ${getEstadoColor(mesa.estado)}`}
@@ -130,39 +77,42 @@ export function EstadoMesas() {
           </CardHeader>
           
           <CardContent className="space-y-3">
-            {mesa.estado === "ocupada" && mesa.pedidoActual && (
+            {mesa.estado === "ocupada" && mesa.pedido_actual && (
               <>
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium">Pedido:</span>
-                    <span className="text-sm">{mesa.pedidoActual.numero}</span>
+                    <span className="text-sm">{mesa.pedido_actual.numero_pedido}</span>
                   </div>
                   
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium">Total:</span>
-                    <span className="text-sm font-semibold">S/ {mesa.pedidoActual.total.toFixed(2)}</span>
+                    <span className="text-sm font-semibold">S/ {mesa.pedido_actual.total.toFixed(2)}</span>
                   </div>
                   
                   <div className="flex justify-between items-center">
                     <span className="text-sm font-medium">Estado:</span>
                     <Badge variant="outline" className="text-xs">
-                      {mesa.pedidoActual.estado}
+                      {mesa.pedido_actual.estado}
                     </Badge>
+                  </div>
+
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">Hora:</span>
+                    <span className="text-sm">{formatHora(mesa.pedido_actual.hora_pedido)}</span>
                   </div>
                 </div>
 
-                {mesa.tiempoOcupacion && (
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                    <Clock className="w-4 h-4" />
-                    Ocupada {mesa.tiempoOcupacion} min
-                  </div>
-                )}
+                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                  <Clock className="w-4 h-4" />
+                  Ocupada {getTiempoOcupacion(mesa.pedido_actual.hora_pedido)} min
+                </div>
 
                 <Button 
                   size="sm" 
                   variant="outline" 
                   className="w-full"
-                  onClick={() => liberarMesa(mesa.id)}
+                  onClick={() => handleLiberarMesa(mesa.id)}
                 >
                   Liberar Mesa
                 </Button>
@@ -173,7 +123,7 @@ export function EstadoMesas() {
               <Button 
                 size="sm" 
                 className="w-full bg-green-600 hover:bg-green-700"
-                onClick={() => asignarMesa(mesa.id)}
+                onClick={() => handleAsignarMesa(mesa.id)}
               >
                 <Plus className="w-4 h-4 mr-1" />
                 Asignar Mesa
@@ -189,7 +139,7 @@ export function EstadoMesas() {
                   size="sm" 
                   variant="outline" 
                   className="w-full"
-                  onClick={() => asignarMesa(mesa.id)}
+                  onClick={() => cambiarEstadoMesa(mesa.id, "ocupada")}
                 >
                   Confirmar Llegada
                 </Button>
