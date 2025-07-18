@@ -54,7 +54,15 @@ export function usePedidos() {
         .order('hora_pedido', { ascending: false })
 
       if (error) throw error
-      setPedidos(data || [])
+      
+      // Asegurar tipos correctos
+      const pedidosTyped = (data || []).map(pedido => ({
+        ...pedido,
+        tipo_pedido: pedido.tipo_pedido as 'local' | 'delivery' | 'para_llevar',
+        estado: pedido.estado as 'pendiente' | 'preparando' | 'listo' | 'entregado'
+      }))
+      
+      setPedidos(pedidosTyped)
     } catch (error) {
       console.error('Error fetching pedidos:', error)
       toast({

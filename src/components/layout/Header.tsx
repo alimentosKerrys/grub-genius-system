@@ -1,6 +1,8 @@
+
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { MobileNavigationDrawer } from "@/components/layout/MobileNavigationDrawer"
 import { 
   Search, 
   Bell, 
@@ -12,7 +14,10 @@ import {
 export function Header() {
   return (
     <header className="border-b border-border bg-card/50 backdrop-blur-sm">
-      <div className="flex h-16 items-center px-6 gap-4">
+      <div className="flex h-16 items-center px-4 lg:px-6 gap-4">
+        {/* Mobile Navigation */}
+        <MobileNavigationDrawer />
+
         {/* Search Bar */}
         <div className="flex-1 max-w-md">
           <div className="relative">
@@ -24,7 +29,7 @@ export function Header() {
           </div>
         </div>
 
-        {/* Quick Stats */}
+        {/* Quick Stats - Hidden on mobile */}
         <div className="hidden lg:flex items-center gap-4">
           <div className="flex items-center gap-2 px-3 py-1.5 bg-primary-muted rounded-lg">
             <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
@@ -49,7 +54,7 @@ export function Header() {
             </Badge>
           </Button>
           
-          <Button variant="ghost" size="icon">
+          <Button variant="ghost" size="icon" className="hidden sm:flex">
             <Settings className="h-4 w-4" />
           </Button>
           
