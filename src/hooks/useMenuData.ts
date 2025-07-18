@@ -44,6 +44,7 @@ export function useMenuData() {
           .from('entradas')
           .select('*')
           .eq('activo', true)
+          .order('nombre')
 
         if (entradasError) {
           console.error('Error fetching entradas:', entradasError)
@@ -58,6 +59,8 @@ export function useMenuData() {
           .from('platos')
           .select('*')
           .eq('activo', true)
+          .order('categoria', { ascending: true })
+          .order('nombre', { ascending: true })
 
         if (platosError) {
           console.error('Error fetching platos:', platosError)
@@ -72,6 +75,7 @@ export function useMenuData() {
           .from('menus')
           .select('*')
           .eq('activo', true)
+          .order('nombre')
 
         if (menusError) {
           console.error('Error fetching menus:', menusError)

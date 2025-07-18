@@ -1,3 +1,4 @@
+
 import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -34,7 +35,7 @@ interface ItemPedido {
 
 export function NuevoPedidoDialog({ open, onOpenChange, tipo }: NuevoPedidoDialogProps) {
   const { toast } = useToast()
-  const { entradas, platos, menus } = useMenuData()
+  const { entradas, platos, menus, loading } = useMenuData()
   const { mesas } = useMesas()
   
   const [items, setItems] = useState<ItemPedido[]>([])
@@ -71,6 +72,9 @@ export function NuevoPedidoDialog({ open, onOpenChange, tipo }: NuevoPedidoDialo
 
   const mesaSeleccionadaInfo = mesas.find(m => m.id === mesaSeleccionada)
 
+  // Encontrar el plato genérico "Plato del Día" para usar en menús
+  const platoDelDia = platos.find(p => p.nombre === 'Plato del Día') || platos[0]
+
   const agregarPlato = (plato: any, esMenu: boolean = false, entradaId?: string) => {
     const nuevoItem: ItemPedido = {
       plato_id: plato.id,
@@ -101,8 +105,17 @@ export function NuevoPedidoDialog({ open, onOpenChange, tipo }: NuevoPedidoDialo
 
   // Funciones para agregar diferentes tipos de menú
   const agregarMenuCompleto = (entradaId: string) => {
+    if (!platoDelDia) {
+      toast({
+        title: "Error",
+        description: "No se encontró plato base para el menú",
+        variant: "destructive"
+      })
+      return
+    }
+
     const menuItem: ItemPedido = {
-      plato_id: 'menu-completo',
+      plato_id: platoDelDia.id,
       plato_nombre: 'Menú Ejecutivo',
       plato_precio: 9.00,
       cantidad: 1,
@@ -120,8 +133,17 @@ export function NuevoPedidoDialog({ open, onOpenChange, tipo }: NuevoPedidoDialo
   }
 
   const agregarSoloEntrada = (entradaId: string) => {
+    if (!platoDelDia) {
+      toast({
+        title: "Error",
+        description: "No se encontró plato base para la entrada",
+        variant: "destructive"
+      })
+      return
+    }
+
     const entradaItem: ItemPedido = {
-      plato_id: 'solo-entrada',
+      plato_id: platoDelDia.id,
       plato_nombre: 'Solo Entrada',
       plato_precio: 3.00,
       cantidad: 1,
@@ -139,8 +161,17 @@ export function NuevoPedidoDialog({ open, onOpenChange, tipo }: NuevoPedidoDialo
   }
 
   const agregarSoloPlato = () => {
+    if (!platoDelDia) {
+      toast({
+        title: "Error",
+        description: "No se encontró plato base",
+        variant: "destructive"
+      })
+      return
+    }
+
     const platoItem: ItemPedido = {
-      plato_id: 'solo-plato',
+      plato_id: platoDelDia.id,
       plato_nombre: 'Solo Plato de Fondo',
       plato_precio: 8.00,
       cantidad: 1,
@@ -236,6 +267,8 @@ export function NuevoPedidoDialog({ open, onOpenChange, tipo }: NuevoPedidoDialo
       const total = calcularTotal()
       const numeroPedido = generarNumeroPedido()
 
+      console.log('Creando pedido con items:', items)
+
       // Crear pedido
       const { data: pedido, error: pedidoError } = await supabase
         .from('pedidos')
@@ -255,29 +288,19 @@ export function NuevoPedidoDialog({ open, onOpenChange, tipo }: NuevoPedidoDialo
 
       if (pedidoError) throw pedidoError
 
-      // Para items de menú, usar el primer plato disponible como placeholder o crear un plato genérico
-      const platoPlaceholder = platos.length > 0 ? platos[0] : null
-
       // Crear items del pedido
-      const itemsData = items.map(item => {
-        let platoId = item.plato_id
-        
-        // Para items de menú que no tienen un plato específico
-        if (item.es_menu && (item.plato_id === 'menu-completo' || item.plato_id === 'solo-entrada' || item.plato_id === 'solo-plato')) {
-          platoId = platoPlaceholder?.id || item.plato_id
-        }
+      const itemsData = items.map(item => ({
+        pedido_id: pedido.id,
+        plato_id: item.plato_id,
+        cantidad: item.cantidad,
+        precio_unitario: item.plato_precio,
+        es_menu: item.es_menu,
+        entrada_id: item.entrada_id || null,
+        precio_menu: item.es_menu ? item.plato_precio : null,
+        observaciones: item.observaciones || null
+      }))
 
-        return {
-          pedido_id: pedido.id,
-          plato_id: platoId,
-          cantidad: item.cantidad,
-          precio_unitario: item.plato_precio,
-          es_menu: item.es_menu,
-          entrada_id: item.entrada_id || null,
-          precio_menu: item.es_menu ? item.plato_precio : null,
-          observaciones: item.observaciones || null
-        }
-      })
+      console.log('Creando items del pedido:', itemsData)
 
       const { error: itemsError } = await supabase
         .from('pedido_items')
@@ -320,6 +343,21 @@ export function NuevoPedidoDialog({ open, onOpenChange, tipo }: NuevoPedidoDialo
   }
 
   const mesasLibres = mesas.filter(m => m.estado === 'libre')
+
+  if (loading) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <div className="flex items-center justify-center py-8">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
+              <p>Cargando menú...</p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    )
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -634,12 +672,11 @@ export function NuevoPedidoDialog({ open, onOpenChange, tipo }: NuevoPedidoDialo
               <h4 className="font-medium">PLATOS INDIVIDUALES</h4>
               {platos.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  <p>No hay platos individuales cargados en la base de datos.</p>
-                  <p className="text-sm mt-2">Los platos se pueden agregar desde la sección de Platos.</p>
+                  <p>Cargando platos...</p>
                 </div>
               ) : (
                 <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {platos.map((plato) => (
+                  {platos.filter(p => p.nombre !== 'Plato del Día').map((plato) => (
                     <Card key={plato.id} className="cursor-pointer hover:shadow-md transition-shadow">
                       <CardContent className="p-4">
                         <div className="flex justify-between items-start">
