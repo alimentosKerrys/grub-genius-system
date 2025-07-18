@@ -55,12 +55,25 @@ export function usePedidos() {
 
       if (error) throw error
       
-      // Asegurar tipos correctos
+      // Mapear y validar datos correctamente
       const pedidosTyped = (data || []).map(pedido => ({
         ...pedido,
         tipo_pedido: pedido.tipo_pedido as 'local' | 'delivery' | 'para_llevar',
-        estado: pedido.estado as 'pendiente' | 'preparando' | 'listo' | 'entregado'
-      }))
+        estado: pedido.estado as 'pendiente' | 'preparando' | 'listo' | 'entregado',
+        items: (pedido.items || []).map((item: any) => ({
+          id: item.id,
+          plato: {
+            nombre: item.plato?.nombre || 'Plato no encontrado',
+            precio_base: item.plato?.precio_base || 0
+          },
+          entrada: item.entrada ? { nombre: item.entrada.nombre } : undefined,
+          cantidad: item.cantidad || 1,
+          precio_unitario: item.precio_unitario || 0,
+          es_menu: item.es_menu || false,
+          precio_menu: item.precio_menu || undefined,
+          observaciones: item.observaciones || undefined
+        }))
+      })) as Pedido[]
       
       setPedidos(pedidosTyped)
     } catch (error) {
