@@ -1,6 +1,5 @@
-
 import { useState } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -9,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { Plus, Minus, Users, Truck, ShoppingBag, UtensilsCrossed } from "lucide-react"
+import { Plus, Minus, Users, Truck, ShoppingBag, UtensilsCrossed, Edit3 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useMenuData } from "@/hooks/useMenuData"
 import { useMesas } from "@/hooks/useMesas"
@@ -27,6 +26,7 @@ interface ItemPedido {
   plato_precio: number
   cantidad: number
   es_menu: boolean
+  tipo_menu?: 'completo' | 'solo_entrada' | 'solo_plato'
   entrada_id?: string
   entrada_nombre?: string
   observaciones?: string
@@ -44,6 +44,8 @@ export function NuevoPedidoDialog({ open, onOpenChange, tipo }: NuevoPedidoDialo
   const [direccion, setDireccion] = useState("")
   const [observaciones, setObservaciones] = useState("")
   const [guardando, setGuardando] = useState(false)
+  const [editandoCapacidad, setEditandoCapacidad] = useState<string | null>(null)
+  const [nuevaCapacidad, setNuevaCapacidad] = useState("")
 
   const getTipoIcon = () => {
     switch (tipo) {
@@ -66,6 +68,8 @@ export function NuevoPedidoDialog({ open, onOpenChange, tipo }: NuevoPedidoDialo
         return "Nuevo Pedido - Para Llevar"
     }
   }
+
+  const mesaSeleccionadaInfo = mesas.find(m => m.id === mesaSeleccionada)
 
   const agregarPlato = (plato: any, esMenu: boolean = false, entradaId?: string) => {
     const nuevoItem: ItemPedido = {
@@ -95,20 +99,59 @@ export function NuevoPedidoDialog({ open, onOpenChange, tipo }: NuevoPedidoDialo
     }
   }
 
-  // Función para agregar menú con entrada específica
-  const agregarMenuConEntrada = (entradaId: string) => {
-    // Como no tenemos platos aún, crear un plato temporal para el menú
-    const platoTemporal = {
-      id: 'menu-temp',
-      nombre: 'Menú Ejecutivo',
-      precio_base: 9.00
+  // Funciones para agregar diferentes tipos de menú
+  const agregarMenuCompleto = (entradaId: string) => {
+    const menuItem: ItemPedido = {
+      plato_id: 'menu-completo',
+      plato_nombre: 'Menú Ejecutivo',
+      plato_precio: 9.00,
+      cantidad: 1,
+      es_menu: true,
+      tipo_menu: 'completo',
+      entrada_id: entradaId,
+      entrada_nombre: entradas.find(e => e.id === entradaId)?.nombre
     }
     
-    agregarPlato(platoTemporal, true, entradaId)
-    
+    setItems([...items, menuItem])
     toast({
       title: "Menú agregado",
-      description: `Menú con ${entradas.find(e => e.id === entradaId)?.nombre} agregado al pedido`,
+      description: `Menú completo con ${entradas.find(e => e.id === entradaId)?.nombre} agregado`,
+    })
+  }
+
+  const agregarSoloEntrada = (entradaId: string) => {
+    const entradaItem: ItemPedido = {
+      plato_id: 'solo-entrada',
+      plato_nombre: 'Solo Entrada',
+      plato_precio: 3.00,
+      cantidad: 1,
+      es_menu: true,
+      tipo_menu: 'solo_entrada',
+      entrada_id: entradaId,
+      entrada_nombre: entradas.find(e => e.id === entradaId)?.nombre
+    }
+    
+    setItems([...items, entradaItem])
+    toast({
+      title: "Entrada agregada",
+      description: `${entradas.find(e => e.id === entradaId)?.nombre} agregada por S/ 3.00`,
+    })
+  }
+
+  const agregarSoloPlato = () => {
+    const platoItem: ItemPedido = {
+      plato_id: 'solo-plato',
+      plato_nombre: 'Solo Plato de Fondo',
+      plato_precio: 8.00,
+      cantidad: 1,
+      es_menu: true,
+      tipo_menu: 'solo_plato'
+    }
+    
+    setItems([...items, platoItem])
+    toast({
+      title: "Plato agregado",
+      description: "Plato de fondo del día agregado por S/ 8.00",
     })
   }
 
@@ -124,14 +167,39 @@ export function NuevoPedidoDialog({ open, onOpenChange, tipo }: NuevoPedidoDialo
 
   const calcularTotal = () => {
     return items.reduce((total, item) => {
-      const precio = item.es_menu ? 9.00 : item.plato_precio
-      return total + (precio * item.cantidad)
+      return total + (item.plato_precio * item.cantidad)
     }, 0)
   }
 
   const generarNumeroPedido = () => {
     const timestamp = Date.now().toString().slice(-6)
     return `P-${timestamp}`
+  }
+
+  const actualizarCapacidadMesa = async (mesaId: string, nuevaCapacidadNum: number) => {
+    try {
+      const { error } = await supabase
+        .from('mesas')
+        .update({ capacidad: nuevaCapacidadNum })
+        .eq('id', mesaId)
+
+      if (error) throw error
+
+      toast({
+        title: "Capacidad actualizada",
+        description: `Mesa actualizada a ${nuevaCapacidadNum} personas`,
+      })
+      
+      setEditandoCapacidad(null)
+      setNuevaCapacidad("")
+    } catch (error) {
+      console.error('Error updating mesa capacity:', error)
+      toast({
+        title: "Error",
+        description: "No se pudo actualizar la capacidad",
+        variant: "destructive"
+      })
+    }
   }
 
   const guardarPedido = async () => {
@@ -187,25 +255,29 @@ export function NuevoPedidoDialog({ open, onOpenChange, tipo }: NuevoPedidoDialo
 
       if (pedidoError) throw pedidoError
 
-      // Para pedidos de menú, necesitamos crear un plato temporal o usar uno existente
-      // Por ahora usaremos el primer plato disponible como placeholder
+      // Para items de menú, usar el primer plato disponible como placeholder o crear un plato genérico
       const platoPlaceholder = platos.length > 0 ? platos[0] : null
 
-      if (!platoPlaceholder && items.some(item => item.es_menu)) {
-        throw new Error("No hay platos disponibles para crear el menú")
-      }
-
       // Crear items del pedido
-      const itemsData = items.map(item => ({
-        pedido_id: pedido.id,
-        plato_id: item.es_menu ? (platoPlaceholder?.id || item.plato_id) : item.plato_id,
-        cantidad: item.cantidad,
-        precio_unitario: item.es_menu ? 9.00 : item.plato_precio,
-        es_menu: item.es_menu,
-        entrada_id: item.entrada_id || null,
-        precio_menu: item.es_menu ? 9.00 : null,
-        observaciones: item.observaciones || null
-      }))
+      const itemsData = items.map(item => {
+        let platoId = item.plato_id
+        
+        // Para items de menú que no tienen un plato específico
+        if (item.es_menu && (item.plato_id === 'menu-completo' || item.plato_id === 'solo-entrada' || item.plato_id === 'solo-plato')) {
+          platoId = platoPlaceholder?.id || item.plato_id
+        }
+
+        return {
+          pedido_id: pedido.id,
+          plato_id: platoId,
+          cantidad: item.cantidad,
+          precio_unitario: item.plato_precio,
+          es_menu: item.es_menu,
+          entrada_id: item.entrada_id || null,
+          precio_menu: item.es_menu ? item.plato_precio : null,
+          observaciones: item.observaciones || null
+        }
+      })
 
       const { error: itemsError } = await supabase
         .from('pedido_items')
@@ -257,6 +329,9 @@ export function NuevoPedidoDialog({ open, onOpenChange, tipo }: NuevoPedidoDialo
             {getTipoIcon()}
             {getTipoTitulo()}
           </DialogTitle>
+          <DialogDescription>
+            Crear un nuevo pedido para {tipo === "local" ? "mesa" : tipo === "delivery" ? "delivery" : "para llevar"}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -272,11 +347,64 @@ export function NuevoPedidoDialog({ open, onOpenChange, tipo }: NuevoPedidoDialo
                   <SelectContent>
                     {mesasLibres.map(mesa => (
                       <SelectItem key={mesa.id} value={mesa.id}>
-                        Mesa {mesa.numero} ({mesa.capacidad} personas)
+                        <div className="flex items-center justify-between w-full">
+                          <span>Mesa {mesa.numero}</span>
+                          <div className="flex items-center gap-2 ml-4">
+                            <span className="text-sm text-muted-foreground">
+                              {mesa.capacidad} personas
+                            </span>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 w-6 p-0"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setEditandoCapacidad(mesa.id)
+                                setNuevaCapacidad(mesa.capacidad.toString())
+                              }}
+                            >
+                              <Edit3 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                
+                {/* Editor de capacidad */}
+                {editandoCapacidad && (
+                  <div className="flex items-center gap-2 mt-2">
+                    <Input
+                      type="number"
+                      value={nuevaCapacidad}
+                      onChange={(e) => setNuevaCapacidad(e.target.value)}
+                      placeholder="Nueva capacidad"
+                      className="w-32"
+                    />
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        const capacidad = parseInt(nuevaCapacidad)
+                        if (capacidad > 0) {
+                          actualizarCapacidadMesa(editandoCapacidad, capacidad)
+                        }
+                      }}
+                    >
+                      Guardar
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setEditandoCapacidad(null)
+                        setNuevaCapacidad("")
+                      }}
+                    >
+                      Cancelar
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -332,7 +460,14 @@ export function NuevoPedidoDialog({ open, onOpenChange, tipo }: NuevoPedidoDialo
             {items.length > 0 && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Resumen del Pedido</CardTitle>
+                  <CardTitle className="text-lg">
+                    Resumen del Pedido
+                    {tipo === "local" && mesaSeleccionadaInfo && (
+                      <div className="text-sm font-normal text-muted-foreground">
+                        Mesa {mesaSeleccionadaInfo.numero} ({mesaSeleccionadaInfo.capacidad} personas)
+                      </div>
+                    )}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {items.map((item, index) => (
@@ -342,20 +477,34 @@ export function NuevoPedidoDialog({ open, onOpenChange, tipo }: NuevoPedidoDialo
                           <div className="space-y-1">
                             <div className="font-medium flex items-center gap-1">
                               <UtensilsCrossed className="w-4 h-4 text-orange-600" />
-                              Menú Ejecutivo
+                              {item.plato_nombre}
                             </div>
-                            <div className="text-sm text-muted-foreground">
-                              • {item.entrada_nombre || 'Sin entrada'}
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                              • Plato de fondo del día
-                            </div>
+                            {item.tipo_menu === 'completo' && (
+                              <>
+                                <div className="text-sm text-muted-foreground">
+                                  • {item.entrada_nombre}
+                                </div>
+                                <div className="text-sm text-muted-foreground">
+                                  • Plato de fondo del día
+                                </div>
+                              </>
+                            )}
+                            {item.tipo_menu === 'solo_entrada' && (
+                              <div className="text-sm text-muted-foreground">
+                                • {item.entrada_nombre}
+                              </div>
+                            )}
+                            {item.tipo_menu === 'solo_plato' && (
+                              <div className="text-sm text-muted-foreground">
+                                • Plato de fondo del día
+                              </div>
+                            )}
                           </div>
                         ) : (
                           <div className="font-medium">{item.plato_nombre}</div>
                         )}
                         <div className="text-sm text-muted-foreground">
-                          S/ {item.es_menu ? '9.00' : item.plato_precio.toFixed(2)} c/u
+                          S/ {item.plato_precio.toFixed(2)} c/u
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -375,7 +524,7 @@ export function NuevoPedidoDialog({ open, onOpenChange, tipo }: NuevoPedidoDialo
                           <Plus className="w-3 h-3" />
                         </Button>
                         <div className="w-20 text-right font-semibold">
-                          S/ {((item.es_menu ? 9.00 : item.plato_precio) * item.cantidad).toFixed(2)}
+                          S/ {(item.plato_precio * item.cantidad).toFixed(2)}
                         </div>
                       </div>
                     </div>
@@ -401,40 +550,74 @@ export function NuevoPedidoDialog({ open, onOpenChange, tipo }: NuevoPedidoDialo
               <div className="space-y-3">
                 <h4 className="font-medium text-orange-600 flex items-center gap-2">
                   <UtensilsCrossed className="w-4 h-4" />
-                  MENÚS (S/ 9.00)
+                  OPCIONES DE MENÚ
                 </h4>
                 {menus.map((menu) => (
                   <Card key={menu.id} className="border-orange-200">
                     <CardContent className="p-4">
                       <div className="space-y-3">
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <h4 className="font-medium flex items-center gap-2">
-                              <UtensilsCrossed className="w-4 h-4 text-orange-600" />
-                              {menu.nombre}
-                            </h4>
-                            <p className="text-sm text-muted-foreground">{menu.descripcion}</p>
+                        {/* Botón para solo plato de fondo */}
+                        <div className="flex justify-between items-center p-2 border rounded">
+                          <div>
+                            <span className="font-medium">Solo Plato de Fondo</span>
+                            <div className="text-sm text-muted-foreground">Plato del día</div>
                           </div>
-                          <div className="font-semibold text-lg text-orange-600">
-                            S/ {menu.precio_menu.toFixed(2)}
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-green-600">S/ 8.00</span>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={agregarSoloPlato}
+                              className="bg-green-600 hover:bg-green-700 text-white"
+                            >
+                              <Plus className="w-3 h-3" />
+                            </Button>
                           </div>
                         </div>
                         
-                        {/* Selector de Entrada */}
+                        {/* Opciones de entrada */}
                         <div className="space-y-2">
-                          <Label className="text-sm">Seleccionar Entrada:</Label>
+                          <Label className="text-sm font-medium">Entradas Disponibles:</Label>
                           <div className="grid grid-cols-1 gap-2">
                             {entradas.map(entrada => (
-                              <div key={entrada.id} className="flex items-center justify-between p-2 border rounded">
-                                <span className="text-sm">{entrada.nombre}</span>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => agregarMenuConEntrada(entrada.id)}
-                                  className="bg-orange-600 hover:bg-orange-700 text-white"
-                                >
-                                  <Plus className="w-3 h-3" />
-                                </Button>
+                              <div key={entrada.id} className="space-y-1">
+                                {/* Solo entrada */}
+                                <div className="flex items-center justify-between p-2 border rounded">
+                                  <div>
+                                    <span className="text-sm font-medium">{entrada.nombre}</span>
+                                    <div className="text-xs text-muted-foreground">Solo entrada</div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm font-semibold text-blue-600">S/ 3.00</span>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => agregarSoloEntrada(entrada.id)}
+                                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                                    >
+                                      <Plus className="w-3 h-3" />
+                                    </Button>
+                                  </div>
+                                </div>
+                                
+                                {/* Menú completo */}
+                                <div className="flex items-center justify-between p-2 border rounded bg-orange-50">
+                                  <div>
+                                    <span className="text-sm font-medium">{entrada.nombre} + Plato de Fondo</span>
+                                    <div className="text-xs text-muted-foreground">Menú completo</div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm font-semibold text-orange-600">S/ 9.00</span>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => agregarMenuCompleto(entrada.id)}
+                                      className="bg-orange-600 hover:bg-orange-700 text-white"
+                                    >
+                                      <Plus className="w-3 h-3" />
+                                    </Button>
+                                  </div>
+                                </div>
                               </div>
                             ))}
                           </div>
@@ -451,7 +634,8 @@ export function NuevoPedidoDialog({ open, onOpenChange, tipo }: NuevoPedidoDialo
               <h4 className="font-medium">PLATOS INDIVIDUALES</h4>
               {platos.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  No hay platos disponibles. Agregue platos en la sección de Platos.
+                  <p>No hay platos individuales cargados en la base de datos.</p>
+                  <p className="text-sm mt-2">Los platos se pueden agregar desde la sección de Platos.</p>
                 </div>
               ) : (
                 <div className="space-y-3 max-h-96 overflow-y-auto">
