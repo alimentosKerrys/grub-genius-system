@@ -39,6 +39,7 @@ export function usePedidos() {
 
   const fetchPedidos = async () => {
     try {
+      // Corregir la consulta especificando la relación correcta para platos
       const { data, error } = await supabase
         .from('pedidos')
         .select(`
@@ -46,7 +47,7 @@ export function usePedidos() {
           mesa:mesas(numero),
           items:pedido_items(
             *,
-            plato:platos(nombre, precio_base),
+            plato:platos!pedido_items_plato_id_fkey(nombre, precio_base),
             entrada:entradas(nombre)
           )
         `)

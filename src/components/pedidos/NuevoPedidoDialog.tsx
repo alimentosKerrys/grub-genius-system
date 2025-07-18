@@ -9,7 +9,6 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { Switch } from "@/components/ui/switch"
 import { Plus, Minus, Users, Truck, ShoppingBag, UtensilsCrossed } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useMenuData } from "@/hooks/useMenuData"
@@ -96,6 +95,23 @@ export function NuevoPedidoDialog({ open, onOpenChange, tipo }: NuevoPedidoDialo
     }
   }
 
+  // Función para agregar menú con entrada específica
+  const agregarMenuConEntrada = (entradaId: string) => {
+    // Como no tenemos platos aún, crear un plato temporal para el menú
+    const platoTemporal = {
+      id: 'menu-temp',
+      nombre: 'Menú Ejecutivo',
+      precio_base: 9.00
+    }
+    
+    agregarPlato(platoTemporal, true, entradaId)
+    
+    toast({
+      title: "Menú agregado",
+      description: `Menú con ${entradas.find(e => e.id === entradaId)?.nombre} agregado al pedido`,
+    })
+  }
+
   const actualizarCantidad = (index: number, nuevaCantidad: number) => {
     if (nuevaCantidad <= 0) {
       setItems(items.filter((_, i) => i !== index))
@@ -171,12 +187,20 @@ export function NuevoPedidoDialog({ open, onOpenChange, tipo }: NuevoPedidoDialo
 
       if (pedidoError) throw pedidoError
 
+      // Para pedidos de menú, necesitamos crear un plato temporal o usar uno existente
+      // Por ahora usaremos el primer plato disponible como placeholder
+      const platoPlaceholder = platos.length > 0 ? platos[0] : null
+
+      if (!platoPlaceholder && items.some(item => item.es_menu)) {
+        throw new Error("No hay platos disponibles para crear el menú")
+      }
+
       // Crear items del pedido
       const itemsData = items.map(item => ({
         pedido_id: pedido.id,
-        plato_id: item.plato_id,
+        plato_id: item.es_menu ? (platoPlaceholder?.id || item.plato_id) : item.plato_id,
         cantidad: item.cantidad,
-        precio_unitario: item.plato_precio,
+        precio_unitario: item.es_menu ? 9.00 : item.plato_precio,
         es_menu: item.es_menu,
         entrada_id: item.entrada_id || null,
         precio_menu: item.es_menu ? 9.00 : null,
@@ -324,7 +348,7 @@ export function NuevoPedidoDialog({ open, onOpenChange, tipo }: NuevoPedidoDialo
                               • {item.entrada_nombre || 'Sin entrada'}
                             </div>
                             <div className="text-sm text-muted-foreground">
-                              • {item.plato_nombre}
+                              • Plato de fondo del día
                             </div>
                           </div>
                         ) : (
@@ -380,7 +404,7 @@ export function NuevoPedidoDialog({ open, onOpenChange, tipo }: NuevoPedidoDialo
                   MENÚS (S/ 9.00)
                 </h4>
                 {menus.map((menu) => (
-                  <Card key={menu.id} className="cursor-pointer hover:shadow-md transition-shadow border-orange-200">
+                  <Card key={menu.id} className="border-orange-200">
                     <CardContent className="p-4">
                       <div className="space-y-3">
                         <div className="flex justify-between items-start">
@@ -406,13 +430,8 @@ export function NuevoPedidoDialog({ open, onOpenChange, tipo }: NuevoPedidoDialo
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  onClick={() => {
-                                    // Seleccionar plato para el menú
-                                    const platoSeleccionado = platos[0] // Por simplicidad, tomar el primer plato
-                                    if (platoSeleccionado) {
-                                      agregarPlato(platoSeleccionado, true, entrada.id)
-                                    }
-                                  }}
+                                  onClick={() => agregarMenuConEntrada(entrada.id)}
+                                  className="bg-orange-600 hover:bg-orange-700 text-white"
                                 >
                                   <Plus className="w-3 h-3" />
                                 </Button>
@@ -430,44 +449,50 @@ export function NuevoPedidoDialog({ open, onOpenChange, tipo }: NuevoPedidoDialo
             {/* Sección PLATOS INDIVIDUALES */}
             <div className="space-y-3">
               <h4 className="font-medium">PLATOS INDIVIDUALES</h4>
-              <div className="space-y-3 max-h-96 overflow-y-auto">
-                {platos.map((plato) => (
-                  <Card key={plato.id} className="cursor-pointer hover:shadow-md transition-shadow">
-                    <CardContent className="p-4">
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h4 className="font-medium">{plato.nombre}</h4>
-                            {plato.es_combinable && (
-                              <Badge variant="secondary" className="text-xs">
-                                Combinable
-                              </Badge>
-                            )}
+              {platos.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No hay platos disponibles. Agregue platos en la sección de Platos.
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {platos.map((plato) => (
+                    <Card key={plato.id} className="cursor-pointer hover:shadow-md transition-shadow">
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h4 className="font-medium">{plato.nombre}</h4>
+                              {plato.es_combinable && (
+                                <Badge variant="secondary" className="text-xs">
+                                  Combinable
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground mb-1">
+                              {plato.descripcion}
+                            </p>
+                            <div className="text-xs text-muted-foreground">
+                              {plato.tiempo_preparacion} min • {plato.categoria}
+                            </div>
                           </div>
-                          <p className="text-sm text-muted-foreground mb-1">
-                            {plato.descripcion}
-                          </p>
-                          <div className="text-xs text-muted-foreground">
-                            {plato.tiempo_preparacion} min • {plato.categoria}
+                          <div className="text-right">
+                            <div className="font-semibold text-lg mb-2">
+                              S/ {plato.precio_base.toFixed(2)}
+                            </div>
+                            <Button 
+                              size="sm"
+                              onClick={() => agregarPlato(plato, false)}
+                              className="bg-orange-600 hover:bg-orange-700"
+                            >
+                              <Plus className="w-4 h-4" />
+                            </Button>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <div className="font-semibold text-lg mb-2">
-                            S/ {plato.precio_base.toFixed(2)}
-                          </div>
-                          <Button 
-                            size="sm"
-                            onClick={() => agregarPlato(plato, false)}
-                            className="bg-orange-600 hover:bg-orange-700"
-                          >
-                            <Plus className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
