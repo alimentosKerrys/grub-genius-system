@@ -14,19 +14,40 @@ import {
   DollarSign,
   Clock,
   Star,
-  MoreVertical,
   Eye,
   Loader2
 } from "lucide-react"
 import { usePlatos } from "@/hooks/usePlatos"
+import { VerRecetaDialog } from "@/components/platos/VerRecetaDialog"
+import { EditarPlatoDialog } from "@/components/platos/EditarPlatoDialog"
+import { PlatoOptionsMenu } from "@/components/platos/PlatoOptionsMenu"
+import type { Plato } from "@/hooks/usePlatos"
 
 const Platos = () => {
   const { platos, loading, getMetricas, getPlatosByCategoria, getRecetasByPlato } = usePlatos()
   const [searchTerm, setSearchTerm] = useState("")
   const [activeTab, setActiveTab] = useState("todos")
+  const [selectedPlato, setSelectedPlato] = useState<Plato | null>(null)
+  const [isVerRecetaOpen, setIsVerRecetaOpen] = useState(false)
+  const [isEditarPlatoOpen, setIsEditarPlatoOpen] = useState(false)
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
   
   const metricas = getMetricas()
   const platosFiltered = getPlatosByCategoria(activeTab)
+
+  const handlePlatoUpdated = () => {
+    setRefreshTrigger(prev => prev + 1)
+  }
+
+  const handleVerReceta = (plato: Plato) => {
+    setSelectedPlato(plato)
+    setIsVerRecetaOpen(true)
+  }
+
+  const handleEditarPlato = (plato: Plato) => {
+    setSelectedPlato(plato)
+    setIsEditarPlatoOpen(true)
+  }
   
   // Filtrar por búsqueda
   const platosToShow = platosFiltered.filter(plato =>
@@ -213,9 +234,10 @@ const Platos = () => {
                         <h3 className="font-semibold text-foreground text-lg leading-tight">
                           {plato.nombre}
                         </h3>
-                        <Button variant="ghost" size="sm" className="p-1 h-auto">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
+                        <PlatoOptionsMenu 
+                          plato={plato} 
+                          onPlatoUpdated={handlePlatoUpdated}
+                        />
                       </div>
                       
                       {/* Métricas principales */}
@@ -264,11 +286,20 @@ const Platos = () => {
                       
                       {/* Acciones */}
                       <div className="flex gap-2">
-                        <Button size="sm" variant="outline" className="flex-1">
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="flex-1"
+                          onClick={() => handleVerReceta(plato)}
+                        >
                           <Eye className="h-3 w-3 mr-2" />
                           Ver Receta
                         </Button>
-                        <Button size="sm" className="flex-1 bg-gradient-fresh hover:opacity-90">
+                        <Button 
+                          size="sm" 
+                          className="flex-1 bg-gradient-fresh hover:opacity-90"
+                          onClick={() => handleEditarPlato(plato)}
+                        >
                           Editar
                         </Button>
                       </div>
@@ -322,9 +353,10 @@ const Platos = () => {
                         <h3 className="font-semibold text-foreground text-lg leading-tight">
                           {plato.nombre}
                         </h3>
-                        <Button variant="ghost" size="sm" className="p-1 h-auto">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
+                        <PlatoOptionsMenu 
+                          plato={plato} 
+                          onPlatoUpdated={handlePlatoUpdated}
+                        />
                       </div>
                       
                       <div className="grid grid-cols-2 gap-4 mb-4">
@@ -369,11 +401,20 @@ const Platos = () => {
                       </div>
                       
                       <div className="flex gap-2">
-                        <Button size="sm" variant="outline" className="flex-1">
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="flex-1"
+                          onClick={() => handleVerReceta(plato)}
+                        >
                           <Eye className="h-3 w-3 mr-2" />
                           Ver Receta
                         </Button>
-                        <Button size="sm" className="flex-1 bg-gradient-fresh hover:opacity-90">
+                        <Button 
+                          size="sm" 
+                          className="flex-1 bg-gradient-fresh hover:opacity-90"
+                          onClick={() => handleEditarPlato(plato)}
+                        >
                           Editar
                         </Button>
                       </div>
@@ -427,9 +468,10 @@ const Platos = () => {
                         <h3 className="font-semibold text-foreground text-lg leading-tight">
                           {plato.nombre}
                         </h3>
-                        <Button variant="ghost" size="sm" className="p-1 h-auto">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
+                        <PlatoOptionsMenu 
+                          plato={plato} 
+                          onPlatoUpdated={handlePlatoUpdated}
+                        />
                       </div>
                       
                       <div className="grid grid-cols-2 gap-4 mb-4">
@@ -474,11 +516,20 @@ const Platos = () => {
                       </div>
                       
                       <div className="flex gap-2">
-                        <Button size="sm" variant="outline" className="flex-1">
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="flex-1"
+                          onClick={() => handleVerReceta(plato)}
+                        >
                           <Eye className="h-3 w-3 mr-2" />
                           Ver Receta
                         </Button>
-                        <Button size="sm" className="flex-1 bg-gradient-fresh hover:opacity-90">
+                        <Button 
+                          size="sm" 
+                          className="flex-1 bg-gradient-fresh hover:opacity-90"
+                          onClick={() => handleEditarPlato(plato)}
+                        >
                           Editar
                         </Button>
                       </div>
@@ -498,6 +549,21 @@ const Platos = () => {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Modales */}
+      <VerRecetaDialog
+        plato={selectedPlato}
+        recetas={selectedPlato ? getRecetasByPlato(selectedPlato.id) : []}
+        isOpen={isVerRecetaOpen}
+        onClose={() => setIsVerRecetaOpen(false)}
+      />
+
+      <EditarPlatoDialog
+        plato={selectedPlato}
+        isOpen={isEditarPlatoOpen}
+        onClose={() => setIsEditarPlatoOpen(false)}
+        onPlatoUpdated={handlePlatoUpdated}
+      />
     </AppLayout>
   )
 }

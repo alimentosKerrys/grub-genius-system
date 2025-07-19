@@ -45,78 +45,80 @@ export function usePlatos() {
   const [loading, setLoading] = useState(true)
   const { toast } = useToast()
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        console.log('Fetching platos data...')
-        
-        // Fetch platos
-        const { data: platosData, error: platosError } = await supabase
-          .from('platos')
-          .select('*')
-          .eq('activo', true)
-          .order('categoria', { ascending: true })
-          .order('nombre', { ascending: true })
+  // Función para refrescar datos
+  const refreshData = async () => {
+    setLoading(true)
+    try {
+      console.log('Fetching platos data...')
+      
+      // Fetch platos
+      const { data: platosData, error: platosError } = await supabase
+        .from('platos')
+        .select('*')
+        .eq('activo', true)
+        .order('categoria', { ascending: true })
+        .order('nombre', { ascending: true })
 
-        if (platosError) {
-          console.error('Error fetching platos:', platosError)
-          throw platosError
-        }
-        
-        console.log('Platos fetched:', platosData)
-        setPlatos(platosData || [])
-
-        // Fetch recetas con ingredientes
-        const { data: recetasData, error: recetasError } = await supabase
-          .from('recetas')
-          .select(`
-            *,
-            ingrediente:ingredientes(
-              id,
-              nombre,
-              categoria,
-              precio_unitario
-            )
-          `)
-          .order('plato_id')
-          .order('es_principal', { ascending: false })
-
-        if (recetasError) {
-          console.error('Error fetching recetas:', recetasError)
-          throw recetasError
-        }
-        
-        console.log('Recetas fetched:', recetasData)
-        setRecetas(recetasData || [])
-
-        // Fetch ingredientes
-        const { data: ingredientesData, error: ingredientesError } = await supabase
-          .from('ingredientes')
-          .select('id, nombre, categoria, precio_unitario')
-          .eq('activo', true)
-          .order('nombre')
-
-        if (ingredientesError) {
-          console.error('Error fetching ingredientes:', ingredientesError)
-          throw ingredientesError
-        }
-        
-        console.log('Ingredientes fetched:', ingredientesData)
-        setIngredientes(ingredientesData || [])
-
-      } catch (error) {
-        console.error('Error fetching platos data:', error)
-        toast({
-          title: "Error",
-          description: "No se pudieron cargar los datos de platos",
-          variant: "destructive"
-        })
-      } finally {
-        setLoading(false)
+      if (platosError) {
+        console.error('Error fetching platos:', platosError)
+        throw platosError
       }
-    }
+      
+      console.log('Platos fetched:', platosData)
+      setPlatos(platosData || [])
 
-    fetchData()
+      // Fetch recetas con ingredientes
+      const { data: recetasData, error: recetasError } = await supabase
+        .from('recetas')
+        .select(`
+          *,
+          ingrediente:ingredientes(
+            id,
+            nombre,
+            categoria,
+            precio_unitario
+          )
+        `)
+        .order('plato_id')
+        .order('es_principal', { ascending: false })
+
+      if (recetasError) {
+        console.error('Error fetching recetas:', recetasError)
+        throw recetasError
+      }
+      
+      console.log('Recetas fetched:', recetasData)
+      setRecetas(recetasData || [])
+
+      // Fetch ingredientes
+      const { data: ingredientesData, error: ingredientesError } = await supabase
+        .from('ingredientes')
+        .select('id, nombre, categoria, precio_unitario')
+        .eq('activo', true)
+        .order('nombre')
+
+      if (ingredientesError) {
+        console.error('Error fetching ingredientes:', ingredientesError)
+        throw ingredientesError
+      }
+      
+      console.log('Ingredientes fetched:', ingredientesData)
+      setIngredientes(ingredientesData || [])
+
+    } catch (error) {
+      console.error('Error fetching platos data:', error)
+      toast({
+        title: "Error",
+        description: "No se pudieron cargar los datos de platos",
+        variant: "destructive"
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    refreshData()
   }, [toast])
 
   // Función para obtener recetas de un plato específico
@@ -171,6 +173,7 @@ export function usePlatos() {
     loading, 
     getRecetasByPlato, 
     getMetricas, 
-    getPlatosByCategoria 
+    getPlatosByCategoria,
+    refreshData
   }
 }
