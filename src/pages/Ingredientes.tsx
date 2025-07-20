@@ -5,69 +5,20 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { EditarIngredienteDialog } from "@/components/ingredientes/EditarIngredienteDialog"
+import { useIngredientes } from "@/hooks/useIngredientes"
 import { 
   Search, 
   Plus, 
   Filter,
   Package,
   TrendingUp,
-  TrendingDown,
   AlertTriangle,
   Users,
-  MoreVertical
+  MoreVertical,
+  ShoppingCart
 } from "lucide-react"
-
-// Mock data para el MVP
-const ingredientes = [
-  {
-    id: 1,
-    nombre: "Cebolla Blanca",
-    stock: 2.5,
-    stockMinimo: 5,
-    unidad: "kg",
-    precio: 4.50,
-    proveedor: "Mercado Central",
-    categoria: "Verduras",
-    estado: "bajo" as const,
-    ultimaCompra: "2024-01-15"
-  },
-  {
-    id: 2,
-    nombre: "Pollo (Pechuga)",
-    stock: 8.2,
-    stockMinimo: 10,
-    unidad: "kg",
-    precio: 18.00,
-    proveedor: "Avícola San Juan",
-    categoria: "Carnes",
-    estado: "normal" as const,
-    ultimaCompra: "2024-01-14"
-  },
-  {
-    id: 3,
-    nombre: "Arroz Blanco",
-    stock: 15.0,
-    stockMinimo: 8,
-    unidad: "kg",
-    precio: 3.20,
-    proveedor: "Distribuidora Norte",
-    categoria: "Granos",
-    estado: "optimo" as const,
-    ultimaCompra: "2024-01-13"
-  },
-  {
-    id: 4,
-    nombre: "Aceite Vegetal",
-    stock: 3.8,
-    stockMinimo: 6,
-    unidad: "litros",
-    precio: 12.50,
-    proveedor: "Comercial Lima",
-    categoria: "Aceites",
-    estado: "bajo" as const,
-    ultimaCompra: "2024-01-12"
-  }
-]
+import { useState } from "react"
 
 const estadoColors = {
   bajo: "destructive",
@@ -76,6 +27,40 @@ const estadoColors = {
 } as const
 
 const Ingredientes = () => {
+  const { 
+    ingredientes, 
+    loading, 
+    getMetricas, 
+    getEstadoStock, 
+    getIngredientesByCategoria,
+    updateStock,
+    updatePrecio
+  } = useIngredientes()
+  
+  const [searchTerm, setSearchTerm] = useState("")
+  const [categoriaFilter, setCategoriaFilter] = useState("todos")
+  
+  const metricas = getMetricas()
+  
+  // Filtrar ingredientes por búsqueda
+  const ingredientesFiltrados = ingredientes.filter(ingrediente =>
+    ingrediente.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    ingrediente.categoria.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+
+  // Obtener categorías únicas
+  const categorias = Array.from(new Set(ingredientes.map(i => i.categoria)))
+
+  if (loading) {
+    return (
+      <AppLayout title="Gestión de Ingredientes">
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </AppLayout>
+    )
+  }
+
   return (
     <AppLayout 
       title="Gestión de Ingredientes" 
@@ -89,9 +74,9 @@ const Ingredientes = () => {
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{ingredientes.length}</div>
+            <div className="text-2xl font-bold">{metricas.totalIngredientes}</div>
             <p className="text-xs text-muted-foreground">
-              3 con stock bajo
+              {metricas.stockBajo} con stock bajo
             </p>
           </CardContent>
         </Card>
@@ -102,9 +87,9 @@ const Ingredientes = () => {
             <TrendingUp className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">S/ 420</div>
+            <div className="text-2xl font-bold">S/ {metricas.valorTotal}</div>
             <p className="text-xs text-success">
-              +8% vs semana anterior
+              Calculado automáticamente
             </p>
           </CardContent>
         </Card>
@@ -115,7 +100,7 @@ const Ingredientes = () => {
             <AlertTriangle className="h-4 w-4 text-warning" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">3</div>
+            <div className="text-2xl font-bold">{metricas.stockBajo}</div>
             <p className="text-xs text-warning">
               Stock bajo crítico
             </p>
@@ -128,7 +113,7 @@ const Ingredientes = () => {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">8</div>
+            <div className="text-2xl font-bold">{metricas.proveedores}</div>
             <p className="text-xs text-muted-foreground">
               Activos este mes
             </p>
@@ -143,6 +128,8 @@ const Ingredientes = () => {
           <Input
             placeholder="Buscar ingredientes..."
             className="pl-10"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
         
@@ -169,81 +156,127 @@ const Ingredientes = () => {
 
         <TabsContent value="lista" className="mt-6">
           <div className="grid gap-4">
-            {ingredientes.map((ingrediente, index) => (
-              <Card key={ingrediente.id} className="animate-slide-up" style={{ animationDelay: `${index * 0.1}s` }}>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4 flex-1">
-                      <div className="w-12 h-12 bg-gradient-spice rounded-lg flex items-center justify-center">
-                        <Package className="w-6 h-6 text-black" />
+            {ingredientesFiltrados.map((ingrediente, index) => {
+              const estado = getEstadoStock(ingrediente)
+              return (
+                <Card key={ingrediente.id} className="animate-slide-up" style={{ animationDelay: `${index * 0.1}s` }}>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4 flex-1">
+                        <div className="w-12 h-12 bg-gradient-spice rounded-lg flex items-center justify-center">
+                          <Package className="w-6 h-6 text-black" />
+                        </div>
+                        
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-3 mb-1">
+                            <h3 className="font-semibold text-foreground truncate">
+                              {ingrediente.nombre}
+                            </h3>
+                            <Badge variant={estadoColors[estado]} className="text-xs">
+                              {estado}
+                            </Badge>
+                          </div>
+                          
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            <span>Stock: {ingrediente.stock_actual} {ingrediente.unidad_medida}</span>
+                            <span>Mín: {ingrediente.stock_minimo} {ingrediente.unidad_medida}</span>
+                            <span>S/ {ingrediente.precio_unitario} por {ingrediente.unidad_medida}</span>
+                          </div>
+                          
+                          <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1">
+                            <span>{ingrediente.categoria}</span>
+                            {ingrediente.proveedor_principal && (
+                              <>
+                                <span>•</span>
+                                <span>{ingrediente.proveedor_principal}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
                       </div>
                       
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3 mb-1">
-                          <h3 className="font-semibold text-foreground truncate">
-                            {ingrediente.nombre}
-                          </h3>
-                          <Badge variant={estadoColors[ingrediente.estado]} className="text-xs">
-                            {ingrediente.estado}
-                          </Badge>
-                        </div>
+                      <div className="flex items-center gap-2">
+                        {estado === 'bajo' && (
+                          <Button size="sm" variant="outline" className="text-warning border-warning hover:bg-warning/10">
+                            <ShoppingCart className="h-4 w-4 mr-2" />
+                            Reabastecer
+                          </Button>
+                        )}
                         
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <span>Stock: {ingrediente.stock} {ingrediente.unidad}</span>
-                          <span>Mín: {ingrediente.stockMinimo} {ingrediente.unidad}</span>
-                          <span>S/ {ingrediente.precio} por {ingrediente.unidad}</span>
-                        </div>
-                        
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1">
-                          <span>{ingrediente.proveedor}</span>
-                          <span>•</span>
-                          <span>Últ. compra: {ingrediente.ultimaCompra}</span>
-                        </div>
+                        <EditarIngredienteDialog
+                          ingrediente={ingrediente}
+                          onUpdateStock={updateStock}
+                          onUpdatePrecio={updatePrecio}
+                          trigger={
+                            <Button variant="ghost" size="sm">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          }
+                        />
                       </div>
                     </div>
                     
-                    <div className="flex items-center gap-2">
-                      {ingrediente.estado === 'bajo' && (
-                        <Button size="sm" variant="outline" className="text-warning border-warning hover:bg-warning/10">
-                          Reabastecer
-                        </Button>
-                      )}
-                      
-                      <Button variant="ghost" size="sm">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
+                    {/* Barra de progreso de stock */}
+                    <div className="mt-4">
+                      <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                        <span>Nivel de Stock</span>
+                        <span>{Math.round((ingrediente.stock_actual / ingrediente.stock_minimo) * 100)}%</span>
+                      </div>
+                      <div className="w-full bg-muted rounded-full h-2">
+                        <div 
+                          className={`h-2 rounded-full ${
+                            estado === 'bajo' ? 'bg-destructive' :
+                            estado === 'normal' ? 'bg-warning' : 'bg-success'
+                          }`}
+                          style={{ 
+                            width: `${Math.min((ingrediente.stock_actual / ingrediente.stock_minimo) * 100, 100)}%` 
+                          }}
+                        />
+                      </div>
                     </div>
-                  </div>
-                  
-                  {/* Barra de progreso de stock */}
-                  <div className="mt-4">
-                    <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                      <span>Nivel de Stock</span>
-                      <span>{Math.round((ingrediente.stock / ingrediente.stockMinimo) * 100)}%</span>
-                    </div>
-                    <div className="w-full bg-muted rounded-full h-2">
-                      <div 
-                        className={`h-2 rounded-full ${
-                          ingrediente.estado === 'bajo' ? 'bg-destructive' :
-                          ingrediente.estado === 'normal' ? 'bg-warning' : 'bg-success'
-                        }`}
-                        style={{ 
-                          width: `${Math.min((ingrediente.stock / ingrediente.stockMinimo) * 100, 100)}%` 
-                        }}
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              )
+            })}
           </div>
         </TabsContent>
 
         <TabsContent value="categorias" className="mt-6">
-          <div className="text-center py-12">
-            <Package className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold text-foreground mb-2">Vista por Categorías</h3>
-            <p className="text-muted-foreground">Organiza tus ingredientes por categorías para mejor gestión</p>
+          <div className="grid gap-6">
+            {categorias.map((categoria) => {
+              const ingredientesCategoria = ingredientes.filter(i => i.categoria === categoria)
+              return (
+                <Card key={categoria} className="animate-slide-up">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Package className="h-5 w-5" />
+                      {categoria}
+                      <Badge variant="secondary" className="ml-2">
+                        {ingredientesCategoria.length}
+                      </Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {ingredientesCategoria.map((ingrediente) => (
+                        <div key={ingrediente.id} className="p-3 border rounded-lg">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="font-medium">{ingrediente.nombre}</span>
+                            <Badge variant={estadoColors[getEstadoStock(ingrediente)]} className="text-xs">
+                              {getEstadoStock(ingrediente)}
+                            </Badge>
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            <div>Stock: {ingrediente.stock_actual} {ingrediente.unidad_medida}</div>
+                            <div>Precio: S/ {ingrediente.precio_unitario}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })}
           </div>
         </TabsContent>
 
