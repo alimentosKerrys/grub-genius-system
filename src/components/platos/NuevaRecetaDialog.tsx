@@ -38,8 +38,10 @@ export function NuevaRecetaDialog({ onRecetaCreada }: NuevaRecetaDialogProps) {
     dias_populares: ''
   })
 
+  // Categorías actualizadas según tu feedback
   const categorias = [
-    'Guisos', 'Salteados', 'Parrillas', 'Chifas', 'Pastas', 'Menús', 'Entradas', 'Bebidas'
+    'Guisos', 'Salteados', 'Parrillas', 'Chifas', 'Pastas', 
+    'Sopas', 'Marino', 'Bebidas', 'Entradas'
   ]
 
   const handleSubmit = async (e: React.FormEvent) => {

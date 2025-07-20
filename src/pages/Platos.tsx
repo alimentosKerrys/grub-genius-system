@@ -1,3 +1,4 @@
+
 import { AppLayout } from "@/components/layout/AppLayout"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -181,186 +182,61 @@ const Platos = () => {
         </div>
       </div>
 
-      {/* Tabs de contenido */}
+      {/* Tabs de contenido - Actualizadas para incluir "Sopas" */}
       <Tabs defaultValue="todos" className="w-full" onValueChange={setCategoriaFilter}>
-        <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:grid-cols-5">
           <TabsTrigger value="todos">Todos los Platos</TabsTrigger>
           <TabsTrigger value="principales">Principales</TabsTrigger>
           <TabsTrigger value="entradas">Entradas</TabsTrigger>
+          <TabsTrigger value="sopas">Sopas</TabsTrigger>
           <TabsTrigger value="bebidas">Bebidas</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="todos" className="mt-6">
-          <div className="grid gap-4">
-            {platosFiltrados.map((plato, index) => (
-              <Card key={plato.id} className="animate-slide-up" style={{ animationDelay: `${index * 0.1}s` }}>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4 flex-1">
-                      <div className="w-12 h-12 bg-gradient-spice rounded-lg flex items-center justify-center">
-                        <ChefHat className="w-6 h-6 text-black" />
+        {/* Componente reutilizable para renderizar platos */}
+        {["todos", "principales", "entradas", "sopas", "bebidas"].map((tabValue) => (
+          <TabsContent key={tabValue} value={tabValue} className="mt-6">
+            <div className="grid gap-4">
+              {platosFiltrados.map((plato, index) => (
+                <Card key={plato.id} className="animate-slide-up" style={{ animationDelay: `${index * 0.1}s` }}>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4 flex-1">
+                        <div className="w-12 h-12 bg-gradient-spice rounded-lg flex items-center justify-center">
+                          <ChefHat className="w-6 h-6 text-black" />
+                        </div>
+                        
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-3 mb-1">
+                            <h3 className="font-semibold text-foreground truncate">
+                              {plato.nombre}
+                            </h3>
+                            <Badge variant="secondary" className="text-xs">
+                              {plato.categoria}
+                            </Badge>
+                          </div>
+                          
+                          <div className="text-sm text-muted-foreground truncate">
+                            {plato.descripcion || 'Sin descripción'}
+                          </div>
+                          
+                          <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1">
+                            <span>Precio: S/ {plato.precio_base}</span>
+                            <span>•</span>
+                            <span>{plato.tiempo_preparacion} min</span>
+                          </div>
+                        </div>
                       </div>
                       
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3 mb-1">
-                          <h3 className="font-semibold text-foreground truncate">
-                            {plato.nombre}
-                          </h3>
-                          <Badge variant="secondary" className="text-xs">
-                            {plato.categoria}
-                          </Badge>
-                        </div>
-                        
-                        <div className="text-sm text-muted-foreground truncate">
-                          {plato.descripcion || 'Sin descripción'}
-                        </div>
-                        
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1">
-                          <span>Precio: S/ {plato.precio_base}</span>
-                          <span>•</span>
-                          <span>{plato.tiempo_preparacion} min</span>
-                        </div>
-                      </div>
+                      <Button variant="ghost" size="sm">
+                        <Plus className="h-4 w-4" />
+                      </Button>
                     </div>
-                    
-                    <Button variant="ghost" size="sm">
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="principales" className="mt-6">
-          <div className="grid gap-4">
-            {platosFiltrados.map((plato, index) => (
-              <Card key={plato.id} className="animate-slide-up" style={{ animationDelay: `${index * 0.1}s` }}>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4 flex-1">
-                      <div className="w-12 h-12 bg-gradient-spice rounded-lg flex items-center justify-center">
-                        <ChefHat className="w-6 h-6 text-black" />
-                      </div>
-                      
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3 mb-1">
-                          <h3 className="font-semibold text-foreground truncate">
-                            {plato.nombre}
-                          </h3>
-                          <Badge variant="secondary" className="text-xs">
-                            {plato.categoria}
-                          </Badge>
-                        </div>
-                        
-                        <div className="text-sm text-muted-foreground truncate">
-                          {plato.descripcion || 'Sin descripción'}
-                        </div>
-                        
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1">
-                          <span>Precio: S/ {plato.precio_base}</span>
-                          <span>•</span>
-                          <span>{plato.tiempo_preparacion} min</span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <Button variant="ghost" size="sm">
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="entradas" className="mt-6">
-          <div className="grid gap-4">
-            {platosFiltrados.map((plato, index) => (
-              <Card key={plato.id} className="animate-slide-up" style={{ animationDelay: `${index * 0.1}s` }}>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4 flex-1">
-                      <div className="w-12 h-12 bg-gradient-spice rounded-lg flex items-center justify-center">
-                        <ChefHat className="w-6 h-6 text-black" />
-                      </div>
-                      
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3 mb-1">
-                          <h3 className="font-semibold text-foreground truncate">
-                            {plato.nombre}
-                          </h3>
-                          <Badge variant="secondary" className="text-xs">
-                            {plato.categoria}
-                          </Badge>
-                        </div>
-                        
-                        <div className="text-sm text-muted-foreground truncate">
-                          {plato.descripcion || 'Sin descripción'}
-                        </div>
-                        
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1">
-                          <span>Precio: S/ {plato.precio_base}</span>
-                          <span>•</span>
-                          <span>{plato.tiempo_preparacion} min</span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <Button variant="ghost" size="sm">
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="bebidas" className="mt-6">
-          <div className="grid gap-4">
-            {platosFiltrados.map((plato, index) => (
-              <Card key={plato.id} className="animate-slide-up" style={{ animationDelay: `${index * 0.1}s` }}>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4 flex-1">
-                      <div className="w-12 h-12 bg-gradient-spice rounded-lg flex items-center justify-center">
-                        <ChefHat className="w-6 h-6 text-black" />
-                      </div>
-                      
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3 mb-1">
-                          <h3 className="font-semibold text-foreground truncate">
-                            {plato.nombre}
-                          </h3>
-                          <Badge variant="secondary" className="text-xs">
-                            {plato.categoria}
-                          </Badge>
-                        </div>
-                        
-                        <div className="text-sm text-muted-foreground truncate">
-                          {plato.descripcion || 'Sin descripción'}
-                        </div>
-                        
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1">
-                          <span>Precio: S/ {plato.precio_base}</span>
-                          <span>•</span>
-                          <span>{plato.tiempo_preparacion} min</span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <Button variant="ghost" size="sm">
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </TabsContent>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </TabsContent>
+        ))}
       </Tabs>
     </AppLayout>
   )

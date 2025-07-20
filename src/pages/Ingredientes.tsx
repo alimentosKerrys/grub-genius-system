@@ -9,6 +9,7 @@ import { EditarIngredienteDialog } from "@/components/ingredientes/EditarIngredi
 import { FiltrosIngredientesDialog } from "@/components/ingredientes/FiltrosIngredientesDialog"
 import { NuevoIngredienteDialog } from "@/components/ingredientes/NuevoIngredienteDialog"
 import { useIngredientes } from "@/hooks/useIngredientes"
+import { useProveedores } from "@/hooks/useProveedores"
 import { 
   Search, 
   Package,
@@ -16,7 +17,10 @@ import {
   AlertTriangle,
   Users,
   MoreVertical,
-  ShoppingCart
+  ShoppingCart,
+  Phone,
+  Mail,
+  MapPin
 } from "lucide-react"
 import { useState } from "react"
 
@@ -37,6 +41,12 @@ const Ingredientes = () => {
     refreshData
   } = useIngredientes()
   
+  const { 
+    proveedores, 
+    loading: loadingProveedores, 
+    getMetricas: getMetricasProveedores 
+  } = useProveedores()
+  
   const [searchTerm, setSearchTerm] = useState("")
   const [filtros, setFiltros] = useState({
     categoria: 'todos',
@@ -47,6 +57,7 @@ const Ingredientes = () => {
   })
   
   const metricas = getMetricas()
+  const metricasProveedores = getMetricasProveedores()
   
   // Aplicar filtros
   let ingredientesFiltrados = ingredientes.filter(ingrediente => {
@@ -75,7 +86,7 @@ const Ingredientes = () => {
 
   // Obtener categorías y proveedores únicos para filtros
   const categorias = Array.from(new Set(ingredientes.map(i => i.categoria)))
-  const proveedores = Array.from(new Set(ingredientes.map(i => i.proveedor_principal).filter(Boolean)))
+  const proveedoresNombres = Array.from(new Set(ingredientes.map(i => i.proveedor_principal).filter(Boolean)))
 
   if (loading) {
     return (
@@ -163,7 +174,7 @@ const Ingredientes = () => {
           <FiltrosIngredientesDialog 
             onFiltrosChange={setFiltros}
             categorias={categorias}
-            proveedores={proveedores}
+            proveedores={proveedoresNombres}
           />
           
           <NuevoIngredienteDialog onIngredienteCreado={refreshData} />
@@ -307,11 +318,70 @@ const Ingredientes = () => {
         </TabsContent>
 
         <TabsContent value="proveedores" className="mt-6">
-          <div className="text-center py-12">
-            <Users className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold text-foreground mb-2">Gestión de Proveedores</h3>
-            <p className="text-muted-foreground">Administra tus proveedores y compara precios</p>
-          </div>
+          {loadingProveedores ? (
+            <div className="flex items-center justify-center h-32">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+            </div>
+          ) : (
+            <div className="grid gap-4">
+              {proveedores.map((proveedor, index) => (
+                <Card key={proveedor.id} className="animate-slide-up" style={{ animationDelay: `${index * 0.1}s` }}>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4 flex-1">
+                        <div className="w-12 h-12 bg-gradient-warm rounded-lg flex items-center justify-center">
+                          <Users className="w-6 h-6 text-black" />
+                        </div>
+                        
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-foreground mb-1">
+                            {proveedor.nombre}
+                          </h3>
+                          
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            {proveedor.contacto && (
+                              <span>{proveedor.contacto}</span>
+                            )}
+                            {proveedor.telefono && (
+                              <div className="flex items-center gap-1">
+                                <Phone className="h-3 w-3" />
+                                <span>{proveedor.telefono}</span>
+                              </div>
+                            )}
+                            {proveedor.email && (
+                              <div className="flex items-center gap-1">
+                                <Mail className="h-3 w-3" />
+                                <span>{proveedor.email}</span>
+                              </div>
+                            )}
+                          </div>
+                          
+                          {proveedor.direccion && (
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                              <MapPin className="h-3 w-3" />
+                              <span>{proveedor.direccion}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <Button variant="ghost" size="sm">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+              
+              {proveedores.length === 0 && (
+                <div className="text-center py-12">
+                  <Users className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold text-foreground mb-2">No hay proveedores</h3>
+                  <p className="text-muted-foreground">Agrega proveedores para gestionar mejor tu inventario</p>
+                </div>
+              )}
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </AppLayout>

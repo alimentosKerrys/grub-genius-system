@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react'
 import { supabase } from '@/integrations/supabase/client'
 import { useToast } from '@/hooks/use-toast'
@@ -151,14 +152,14 @@ export function usePlatos() {
     }
   }
 
-  // Función para filtrar platos por categoría
+  // Función para filtrar platos por categoría - actualizada con las nuevas categorías
   const getPlatosByCategoria = (categoria?: string) => {
     if (!categoria || categoria === 'todos') return platos
     
-    // Mapear categorías del frontend a las del backend
+    // Mapear categorías del frontend a las del backend según tu sistema actual
     const categoriaMap: Record<string, string[]> = {
       'principales': ['Guisos', 'Salteados', 'Parrillas', 'Chifas', 'Pastas'],
-      'entradas': ['Entradas'],
+      'entradas': ['Sopas', 'Entradas', 'Marino'], // Incluye las nuevas categorías
       'bebidas': ['Bebidas']
     }
 
