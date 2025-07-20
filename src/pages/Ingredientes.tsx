@@ -1,16 +1,16 @@
 
 import { AppLayout } from "@/components/layout/AppLayout"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 import { EditarIngredienteDialog } from "@/components/ingredientes/EditarIngredienteDialog"
+import { FiltrosIngredientesDialog } from "@/components/ingredientes/FiltrosIngredientesDialog"
+import { NuevoIngredienteDialog } from "@/components/ingredientes/NuevoIngredienteDialog"
 import { useIngredientes } from "@/hooks/useIngredientes"
 import { 
   Search, 
-  Plus, 
-  Filter,
   Package,
   TrendingUp,
   AlertTriangle,
@@ -32,24 +32,50 @@ const Ingredientes = () => {
     loading, 
     getMetricas, 
     getEstadoStock, 
-    getIngredientesByCategoria,
     updateStock,
-    updatePrecio
+    updatePrecio,
+    refreshData
   } = useIngredientes()
   
   const [searchTerm, setSearchTerm] = useState("")
-  const [categoriaFilter, setCategoriaFilter] = useState("todos")
+  const [filtros, setFiltros] = useState({
+    categoria: 'todos',
+    estado: 'todos',
+    proveedor: 'todos',
+    precioMin: '',
+    precioMax: ''
+  })
   
   const metricas = getMetricas()
   
-  // Filtrar ingredientes por búsqueda
-  const ingredientesFiltrados = ingredientes.filter(ingrediente =>
-    ingrediente.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ingrediente.categoria.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  // Aplicar filtros
+  let ingredientesFiltrados = ingredientes.filter(ingrediente => {
+    // Filtro de búsqueda
+    const matchSearch = ingrediente.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                       ingrediente.categoria.toLowerCase().includes(searchTerm.toLowerCase())
+    
+    // Filtro de categoría
+    const matchCategoria = filtros.categoria === 'todos' || ingrediente.categoria === filtros.categoria
+    
+    // Filtro de estado
+    const estado = getEstadoStock(ingrediente)
+    const matchEstado = filtros.estado === 'todos' || estado === filtros.estado
+    
+    // Filtro de proveedor
+    const matchProveedor = filtros.proveedor === 'todos' || 
+                          ingrediente.proveedor_principal === filtros.proveedor
+    
+    // Filtro de precio
+    const precio = ingrediente.precio_unitario
+    const matchPrecio = (!filtros.precioMin || precio >= Number(filtros.precioMin)) &&
+                       (!filtros.precioMax || precio <= Number(filtros.precioMax))
+    
+    return matchSearch && matchCategoria && matchEstado && matchProveedor && matchPrecio
+  })
 
-  // Obtener categorías únicas
+  // Obtener categorías y proveedores únicos para filtros
   const categorias = Array.from(new Set(ingredientes.map(i => i.categoria)))
+  const proveedores = Array.from(new Set(ingredientes.map(i => i.proveedor_principal).filter(Boolean)))
 
   if (loading) {
     return (
@@ -134,15 +160,13 @@ const Ingredientes = () => {
         </div>
         
         <div className="flex gap-2">
-          <Button variant="outline" size="sm">
-            <Filter className="h-4 w-4 mr-2" />
-            Filtros
-          </Button>
+          <FiltrosIngredientesDialog 
+            onFiltrosChange={setFiltros}
+            categorias={categorias}
+            proveedores={proveedores}
+          />
           
-          <Button className="bg-gradient-warm hover:opacity-90">
-            <Plus className="h-4 w-4 mr-2" />
-            Nuevo Ingrediente
-          </Button>
+          <NuevoIngredienteDialog onIngredienteCreado={refreshData} />
         </div>
       </div>
 
@@ -244,7 +268,9 @@ const Ingredientes = () => {
         <TabsContent value="categorias" className="mt-6">
           <div className="grid gap-6">
             {categorias.map((categoria) => {
-              const ingredientesCategoria = ingredientes.filter(i => i.categoria === categoria)
+              const ingredientesCategoria = ingredientesFiltrados.filter(i => i.categoria === categoria)
+              if (ingredientesCategoria.length === 0) return null
+              
               return (
                 <Card key={categoria} className="animate-slide-up">
                   <CardHeader>
