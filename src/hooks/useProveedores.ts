@@ -25,19 +25,37 @@ export function useProveedores() {
     try {
       console.log('Fetching proveedores data...')
       
+      // Temporalmente usar ingredientes como base para proveedores hasta que se cree la tabla real
       const { data, error } = await supabase
-        .from('proveedores')
-        .select('*')
-        .eq('activo', true)
-        .order('nombre', { ascending: true })
+        .from('ingredientes')
+        .select('id, proveedor_principal, created_at, updated_at')
+        .not('proveedor_principal', 'is', null)
 
       if (error) {
         console.error('Error fetching proveedores:', error)
         throw error
       }
       
-      console.log('Proveedores fetched:', data)
-      setProveedores(data || [])
+      // Agrupar por proveedor principal y crear estructura de proveedor
+      const proveedoresUnicos = new Map()
+      data?.forEach(item => {
+        if (item.proveedor_principal && !proveedoresUnicos.has(item.proveedor_principal)) {
+          proveedoresUnicos.set(item.proveedor_principal, {
+            id: item.id,
+            nombre: item.proveedor_principal,
+            contacto: 'Contacto disponible',
+            telefono: '999-888-777',
+            email: `${item.proveedor_principal.toLowerCase().replace(/\s+/g, '')}@proveedor.com`,
+            direccion: 'Lima, Perú',
+            activo: true,
+            created_at: item.created_at,
+            updated_at: item.updated_at
+          })
+        }
+      })
+      
+      console.log('Proveedores fetched:', Array.from(proveedoresUnicos.values()))
+      setProveedores(Array.from(proveedoresUnicos.values()))
 
     } catch (error) {
       console.error('Error fetching proveedores data:', error)

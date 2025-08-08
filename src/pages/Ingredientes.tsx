@@ -76,8 +76,8 @@ const Ingredientes = () => {
     const matchProveedor = filtros.proveedor === 'todos' || 
                           ingrediente.proveedor_principal === filtros.proveedor
     
-    // Filtro de precio
-    const precio = ingrediente.precio_unitario
+    // Filtro de precio con validación
+    const precio = ingrediente.precio_unitario || 0
     const matchPrecio = (!filtros.precioMin || precio >= Number(filtros.precioMin)) &&
                        (!filtros.precioMax || precio <= Number(filtros.precioMax))
     
@@ -193,6 +193,11 @@ const Ingredientes = () => {
           <div className="grid gap-4">
             {ingredientesFiltrados.map((ingrediente, index) => {
               const estado = getEstadoStock(ingrediente)
+              // Agregar validaciones para evitar errores de undefined
+              const stockActual = ingrediente.stock_actual || 0
+              const stockMinimo = ingrediente.stock_minimo || 1
+              const precioUnitario = ingrediente.precio_unitario || 0
+              
               return (
                 <Card key={ingrediente.id} className="animate-slide-up" style={{ animationDelay: `${index * 0.1}s` }}>
                   <CardContent className="p-6">
@@ -213,9 +218,9 @@ const Ingredientes = () => {
                           </div>
                           
                           <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                            <span>Stock: {ingrediente.stock_actual} {ingrediente.unidad_medida}</span>
-                            <span>Mín: {ingrediente.stock_minimo} {ingrediente.unidad_medida}</span>
-                            <span>S/ {ingrediente.precio_unitario} por {ingrediente.unidad_medida}</span>
+                            <span>Stock: {stockActual.toFixed(2)} {ingrediente.unidad_medida}</span>
+                            <span>Mín: {stockMinimo.toFixed(2)} {ingrediente.unidad_medida}</span>
+                            <span>S/ {precioUnitario.toFixed(2)} por {ingrediente.unidad_medida}</span>
                           </div>
                           
                           <div className="flex items-center gap-4 text-xs text-muted-foreground mt-1">
@@ -251,11 +256,11 @@ const Ingredientes = () => {
                       </div>
                     </div>
                     
-                    {/* Barra de progreso de stock */}
+                    {/* Barra de progreso de stock con validaciones */}
                     <div className="mt-4">
                       <div className="flex justify-between text-xs text-muted-foreground mb-1">
                         <span>Nivel de Stock</span>
-                        <span>{Math.round((ingrediente.stock_actual / ingrediente.stock_minimo) * 100)}%</span>
+                        <span>{Math.round((stockActual / Math.max(stockMinimo, 1)) * 100)}%</span>
                       </div>
                       <div className="w-full bg-muted rounded-full h-2">
                         <div 
@@ -264,7 +269,7 @@ const Ingredientes = () => {
                             estado === 'normal' ? 'bg-warning' : 'bg-success'
                           }`}
                           style={{ 
-                            width: `${Math.min((ingrediente.stock_actual / ingrediente.stock_minimo) * 100, 100)}%` 
+                            width: `${Math.min((stockActual / Math.max(stockMinimo, 1)) * 100, 100)}%` 
                           }}
                         />
                       </div>
@@ -295,20 +300,26 @@ const Ingredientes = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {ingredientesCategoria.map((ingrediente) => (
-                        <div key={ingrediente.id} className="p-3 border rounded-lg">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="font-medium">{ingrediente.nombre}</span>
-                            <Badge variant={estadoColors[getEstadoStock(ingrediente)]} className="text-xs">
-                              {getEstadoStock(ingrediente)}
-                            </Badge>
+                      {ingredientesCategoria.map((ingrediente) => {
+                        // Agregar validaciones aquí también
+                        const stockActual = ingrediente.stock_actual || 0
+                        const precioUnitario = ingrediente.precio_unitario || 0
+                        
+                        return (
+                          <div key={ingrediente.id} className="p-3 border rounded-lg">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="font-medium">{ingrediente.nombre}</span>
+                              <Badge variant={estadoColors[getEstadoStock(ingrediente)]} className="text-xs">
+                                {getEstadoStock(ingrediente)}
+                              </Badge>
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              <div>Stock: {stockActual.toFixed(2)} {ingrediente.unidad_medida}</div>
+                              <div>Precio: S/ {precioUnitario.toFixed(2)}</div>
+                            </div>
                           </div>
-                          <div className="text-sm text-muted-foreground">
-                            <div>Stock: {ingrediente.stock_actual} {ingrediente.unidad_medida}</div>
-                            <div>Precio: S/ {ingrediente.precio_unitario}</div>
-                          </div>
-                        </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   </CardContent>
                 </Card>
